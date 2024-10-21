@@ -1,179 +1,170 @@
 package com.bergman.everdeals_finalproject.controller
 
-import android.content.Context
 import android.content.Intent
-import android.graphics.Paint
 import android.net.Uri
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.ImageView
-import android.widget.TextView
-import com.bergman.everdeals_finalproject.R
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
 import com.bergman.everdeals_finalproject.models.Product
-import com.bumptech.glide.Glide
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
-import com.google.firebase.firestore.*
-import java.util.*
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 
-class CustomAdapter(var context: Context, products: List<Product>) :
-    ArrayAdapter<Product?>(context, -1, products) {
-    var products: List<Product> = products
-
-    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-        val inflater: LayoutInflater =
-            context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val rowProduct: View = inflater.inflate(R.layout.activity_item, parent, false)
-        val txtName = rowProduct.findViewById<TextView>(R.id.nameProduct)
-        val txtPreviousPrice = rowProduct.findViewById<TextView>(R.id.txtPreviousPrice)
-        val txtCurrentPrice = rowProduct.findViewById<TextView>(R.id.txtCurrentPrice)
-        val txtDiscount = rowProduct.findViewById<TextView>(R.id.txtDiscount)
-        val txtUser = rowProduct.findViewById<TextView>(R.id.txtUser)
-        val imageView = rowProduct.findViewById<ImageView>(R.id.imgProduct)
-        val likeCount = rowProduct.findViewById<TextView>(R.id.countLike)
-        val dislikeCount = rowProduct.findViewById<TextView>(R.id.countDislike)
-        val imgLike = rowProduct.findViewById<ImageView>(R.id.imgLike)
-        val imgDislike = rowProduct.findViewById<ImageView>(R.id.imgDislike)
-        val txtOffer = rowProduct.findViewById<TextView>(R.id.txtOffer)
-        val txtTime = rowProduct.findViewById<TextView>(R.id.txtTime)
-        val product: Product = products[position]
-        val userName = AtomicReference("")
-
-        val imgUrl = ("https://firebasestorage.googleapis.com/v0/b/proyecto-descuentos-26422.appspot.com/o/carpeta_imagenes%2F" + product.getName()).toString() + ".jpg?alt=media&token=df4db52a-1af6-476e-9011-9c80ca1a56e0"
-        Glide.with(context).load(imgUrl).into(imageView)
-
-        val db: FirebaseFirestore = FirebaseFirestore.getInstance()
-        val userId: String = product.getUserID() // Replace with the actual user ID you are looking for
-
-        db.collection("users").document(userId).get()
-            .addOnSuccessListener { documentSnapshot ->
-                if (documentSnapshot.exists()) {
-                    userName.set(documentSnapshot.getString("user"))
-                    txtUser.text = userName.get()
-                } else {
-                    // Document does not exist for the provided user ID
-                }
-            }.addOnFailureListener { e -> }
-
-        val productsRef: CollectionReference = db.collection("products")
-        val productName: String = product.getName() // Name of the product you want to search
-        val query: Query = productsRef.whereEqualTo("name", productName)
-
-        query.get().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val snapshot: QuerySnapshot = task.result!!
-                if (snapshot.isNotEmpty()) {
-                    val document: DocumentSnapshot = snapshot.documents[0]
-                    val likes: Int = document.getLong("likes")?.toInt() ?: 0
-                    likeCount.text = likes.toString()
-                    val dislikes: Int = document.getLong("dislikes")?.toInt() ?: 0
-                    dislikeCount.text = dislikes.toString()
-                    val date: Timestamp = document.getTimestamp("date")!!
-                    val hoursPassed = calculateTime(date)
-                    txtTime.text = "$hoursPassed h"
-                } else {
-                    // Product does not exist
-                }
-            } else {
-                // Error executing the query
-            }
+@Composable
+fun ProductsList(products: List<Product>) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        items(products) { product ->
+            ProductItem(product = product)
         }
-
-        txtName.text = product.getName()
-        txtDiscount.text = "(${product.getDiscount()}%)"
-        txtPreviousPrice.text = "${product.getPreviousPrice()} €"
-        txtCurrentPrice.text = "${product.getCurrentPrice()} €"
-        txtPreviousPrice.paintFlags = txtPreviousPrice.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-
-        txtOffer.setOnClickListener {
-            val url: String = products[position].getLink()
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            context.startActivity(intent)
-        }
-
-        imgLike.setOnClickListener {
-            likeCount.text = (likeCount.text.toString().toInt() + 1).toString()
-            val productName: String = product.getName()
-            val db: FirebaseFirestore = FirebaseFirestore.getInstance()
-            val productsRef: CollectionReference = db.collection("products")
-            val query: Query = productsRef.whereEqualTo("name", productName).limit(1)
-
-            query.get().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val querySnapshot: QuerySnapshot = task.result!!
-                    if (querySnapshot.isNotEmpty()) {
-                        val document: DocumentSnapshot = querySnapshot.documents[0]
-                        val productId: String = document.id
-
-                        // Update the document with the found ID
-                        val productRef: DocumentReference = productsRef.document(productId)
-
-                        // Create an object with the new data you want to update
-                        val updatedData: MutableMap<String, Any> = HashMap()
-                        updatedData["likes"] = likeCount.text.toString().toInt()
-
-                        // Add other fields and values you want to update
-                        productRef.update(updatedData).addOnSuccessListener {
-                            // Update was successful
-                        }.addOnFailureListener { e ->
-                            // Error during the update
-                        }
-                    } else {
-                        // No document found with the provided name
-                    }
-                } else {
-                    // Error executing the query
-                }
-            }
-        }
-
-        imgDislike.setOnClickListener {
-            dislikeCount.text = (dislikeCount.text.toString().toInt() + 1).toString()
-            val productName: String = product.getName()
-            val db: FirebaseFirestore = FirebaseFirestore.getInstance()
-            val productsRef: CollectionReference = db.collection("products")
-            val query: Query = productsRef.whereEqualTo("name", productName).limit(1)
-
-            query.get().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val querySnapshot: QuerySnapshot = task.result!!
-                    if (querySnapshot.isNotEmpty()) {
-                        val document: DocumentSnapshot = querySnapshot.documents[0]
-                        val productId: String = document.id
-
-                        // Update the document with the found ID
-                        val productRef: DocumentReference = productsRef.document(productId)
-
-                        // Create an object with the new data you want to update
-                        val updatedData: MutableMap<String, Any> = HashMap()
-                        updatedData["dislikes"] = dislikeCount.text.toString().toInt()
-
-                        // Add other fields and values you want to update
-                        productRef.update(updatedData).addOnSuccessListener {
-                            // Update was successful
-                        }.addOnFailureListener { e ->
-                            // Error during the update
-                        }
-                    } else {
-                        // No document found with the provided name
-                    }
-                } else {
-                    // Error executing the query
-                }
-            }
-        }
-        return rowProduct
-    }
-
-    private fun calculateTime(timestamp: Timestamp): Long {
-        val currentTimestamp: Timestamp = Timestamp.now()
-        val timestampDate: Date = timestamp.toDate()
-        val currentTimestampDate: Date = currentTimestamp.toDate()
-        val millisecondsDifference = currentTimestampDate.time - timestampDate.time
-        return TimeUnit.MILLISECONDS.toHours(millisecondsDifference)
     }
 }
+
+@Composable
+fun ProductItem(product: Product) {
+    var likeCount by remember { mutableStateOf(product.likes) }
+    var dislikeCount by remember { mutableStateOf(product.dislikes) }
+
+    Column(modifier = Modifier.padding(8.dp)) {
+        // Nombre del producto
+        Text(
+            text = product.name,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        // Imagen del producto
+        Image(
+            painter = rememberAsyncImagePainter(product.productImage),
+            contentDescription = null,
+            modifier = Modifier
+                .height(200.dp)
+                .fillMaxWidth(),
+            contentScale = ContentScale.Crop
+        )
+
+        // Precio anterior y actual
+        Text(
+            text = "${product.previousPrice}€",
+            color = Color.Gray,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .fillMaxWidth()
+        )
+        Text(
+            text = "${product.currentPrice}€",
+            color = Color.Red,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Descuento
+        Text(
+            text = "Descuento: ${product.discount}%",
+            color = Color.Green,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+
+        // Likes y Dislikes
+        Row(modifier = Modifier.padding(top = 8.dp)) {
+            IconButton(onClick = { likeCount++ }) {
+                Icon(Icons.Filled.ThumbUp, contentDescription = "Like")
+            }
+            Text(text = likeCount.toString(), modifier = Modifier.alignByBaseline())
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            IconButton(onClick = { dislikeCount++ }) {
+                Icon(Icons.Filled.ThumbDown, contentDescription = "Dislike")
+            }
+            Text(text = dislikeCount.toString(), modifier = Modifier.alignByBaseline())
+        }
+
+        // Botón para abrir la oferta
+        Button(
+            onClick = {
+                val url: String = product.link
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                // Aquí no tenemos acceso a un contexto en Compose puro,
+                // por lo tanto, en una actividad debes usar startActivity(intent).
+            },
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
+            Text("Ver Oferta")
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewProductItem() {
+    val sampleProduct = Product(
+        name = "Producto de Ejemplo",
+        productImage = "https://example.com/image.jpg",
+        description = "Descripción del producto.",
+        link = "https://example.com",
+        userId = "user123",
+        category = "Categoría de Ejemplo",
+        id = "id123",
+        previousPrice = 100.0,
+        currentPrice = 80.0,
+        discount = 20.0,
+        likes = 100,
+        dislikes = 10,
+        sales = 50
+    )
+    ProductItem(product = sampleProduct)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewProductList() {
+    val sampleProducts = listOf(
+        Product(
+            name = "Producto 1",
+            productImage = "https://example.com/image1.jpg",
+            description = "Descripción del producto 1.",
+            link = "https://example.com/producto1",
+            userId = "user1",
+            category = "Categoría 1",
+            id = "id1",
+            previousPrice = 120.0,
+            currentPrice = 100.0,
+            discount = 20.0,
+            likes = 50,
+            dislikes = 5,
+            sales = 30
+        ),
+        Product(
+            name = "Producto 2",
+            productImage = "https://example.com/image2.jpg",
+            description = "Descripción del producto 2.",
+            link = "https://example.com/producto2",
+            userId = "user2",
+            category = "Categoría 2",
+            id = "id2",
+            previousPrice = 150.0,
+            currentPrice = 130.0,
+            discount = 15.0,
+            likes = 70,
+            dislikes = 8,
+            sales = 40
+        )
+    )
+    ProductsList(products = sampleProducts)
+}
+

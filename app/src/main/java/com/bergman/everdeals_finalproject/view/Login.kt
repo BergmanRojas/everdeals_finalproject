@@ -1,201 +1,161 @@
 package com.bergman.everdeals_finalproject.view
 
-import android.content.ContentValues
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Body
-import retrofit2.http.POST
+import com.bergman.everdeals_finalproject.R
+import com.bergman.everdeals_finalproject.ui.theme.EverdealsFinalProjectTheme
+
+// Define colors
+val Blue001875 = Color(0xFF001875)
+val OrangeFF6200 = Color(0xFFFF6200)
+val White = Color(0xFFFFFFFF)
+val Black = Color(0xFF000000)
 
 class Login : ComponentActivity() {
-    private var uri: Uri? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            LoginScreen()
+            EverdealsFinalProjectTheme {
+                LoginScreen()
+            }
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun LoginScreen() {
-        var emailLogin by remember { mutableStateOf("") }
-        var passwordLogin by remember { mutableStateOf("") }
-        var emailRegister by remember { mutableStateOf("") }
-        var passwordRegister by remember { mutableStateOf("") }
-        var confirmPasswordRegister by remember { mutableStateOf("") }
-        var usernameRegister by remember { mutableStateOf("") }
-        var isRegistering by remember { mutableStateOf(false) }
+    fun LoginScreen(logoSize: Int = 120) {
+        var email by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(Blue001875),
+            contentAlignment = Alignment.TopCenter
         ) {
-            if (isRegistering) {
-                Text("Register", style = MaterialTheme.typography.titleLarge)
-
-                BasicTextField(
-                    value = usernameRegister,
-                    onValueChange = { usernameRegister = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Username") }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top  // Coloca los elementos en la parte superior
+            ) {
+                // Logo en la parte superior
+                Image(
+                    painter = painterResource(id = R.drawable.logoeverdeals),
+                    contentDescription = "Logo EverDeals",
+                    modifier = Modifier
+                        .size(350.dp)
+                        .padding(top = 100.dp),  // Reducimos el margen superior
+                    contentScale = ContentScale.Fit
                 )
 
-                BasicTextField(
-                    value = emailRegister,
-                    onValueChange = { emailRegister = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Email") }
+                Spacer(modifier = Modifier.height(16.dp)) // Espacio entre el logo y los campos de texto
+
+                // Email Field
+                TextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    label = { Text("Username", color = Black) },
+                    colors = TextFieldDefaults.textFieldColors(
+                        textColor = Black,
+                        containerColor = White,
+                        focusedIndicatorColor = OrangeFF6200,
+                        unfocusedIndicatorColor = OrangeFF6200
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 )
 
-                BasicTextField(
-                    value = passwordRegister,
-                    onValueChange = { passwordRegister = it },
-                    modifier = Modifier.fillMaxWidth(),
+                // Password Field
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
                     visualTransformation = PasswordVisualTransformation(),
-                    placeholder = { Text("Password") }
+                    label = { Text("Password", color = Black) },
+                    colors = TextFieldDefaults.textFieldColors(
+                        textColor = Black,
+                        containerColor = White,
+                        focusedIndicatorColor = OrangeFF6200,
+                        unfocusedIndicatorColor = OrangeFF6200
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 )
 
-                BasicTextField(
-                    value = confirmPasswordRegister,
-                    onValueChange = { confirmPasswordRegister = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = PasswordVisualTransformation(),
-                    placeholder = { Text("Confirm Password") }
-                )
+                Spacer(modifier = Modifier.height(16.dp))  // Espaciado antes de los botones
 
-                Button(onClick = {
-                    if (passwordRegister == confirmPasswordRegister) {
-                        registerUser(usernameRegister, emailRegister, passwordRegister)
-                    } else {
-                        Toast.makeText(this@Login, "Passwords do not match", Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Text("Register")
+                // Login Button
+                Button(
+                    onClick = { loginUser(email, password) },
+                    modifier = Modifier
+                        .width(160.dp)
+                        .height(55.dp)
+                        .padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangeFF6200)
+                ) {
+                    Text("Login", color = White)
                 }
 
-                Button(onClick = { isRegistering = false }) {
-                    Text("Back to Login")
-                }
-            } else {
-                Text("Login", style = MaterialTheme.typography.titleLarge)
-
-                BasicTextField(
-                    value = emailLogin,
-                    onValueChange = { emailLogin = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Email") }
-                )
-
-                BasicTextField(
-                    value = passwordLogin,
-                    onValueChange = { passwordLogin = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    visualTransformation = PasswordVisualTransformation(),
-                    placeholder = { Text("Password") }
-                )
-
-                Button(onClick = { loginUser(emailLogin, passwordLogin) }) {
-                    Text("Login")
-                }
-
-                Button(onClick = { isRegistering = true }) {
-                    Text("Create Account")
+                // Create Account Button (redirige a RegisterActivity)
+                Button(
+                    onClick = { navigateToRegisterScreen() },
+                    modifier = Modifier
+                        .width(160.dp)
+                        .height(55.dp)
+                        .padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangeFF6200)
+                ) {
+                    Text("Create Account", color = White)
                 }
             }
         }
+    }
+
+    // Redirige a RegisterActivity
+    private fun navigateToRegisterScreen() {
+        val intent = Intent(this, RegisterActivity::class.java)
+        startActivity(intent)
     }
 
     private fun loginUser(email: String, password: String) {
-        val apiService = createApiService()
-        apiService.login(LoginRequest(email, password)).enqueue(object : retrofit2.Callback<LoginResponse> {
-            override fun onResponse(call: retrofit2.Call<LoginResponse>, response: retrofit2.Response<LoginResponse>) {
-                if (response.isSuccessful) {
-                    Log.d(ContentValues.TAG, "Login successful")
-                    startActivity(Intent(this@Login, MainActivity::class.java))
-                } else {
-                    Log.d(ContentValues.TAG, "Invalid credentials")
-                    Toast.makeText(this@Login, "Invalid credentials", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            override fun onFailure(call: retrofit2.Call<LoginResponse>, t: Throwable) {
-                Log.d(ContentValues.TAG, "Error during login: ${t.message}")
-            }
-        })
-    }
-
-    private fun registerUser(username: String, email: String, password: String) {
-        val apiService = createApiService()
-        apiService.register(RegisterRequest(username, email, password)).enqueue(object : retrofit2.Callback<RegisterResponse> {
-            override fun onResponse(call: retrofit2.Call<RegisterResponse>, response: retrofit2.Response<RegisterResponse>) {
-                if (response.isSuccessful) {
-                    Log.d(ContentValues.TAG, "User registered successfully")
-                    Toast.makeText(this@Login, "User created successfully", Toast.LENGTH_SHORT).show()
-                } else {
-                    Log.d(ContentValues.TAG, "Error registering user")
-                }
-            }
-
-            override fun onFailure(call: retrofit2.Call<RegisterResponse>, t: Throwable) {
-                Log.d(ContentValues.TAG, "Error during registration: ${t.message}")
-            }
-        })
-    }
-
-    private fun createApiService(): ApiService {
-        val client = OkHttpClient.Builder().build()
-        val retrofit = Retrofit.Builder()
-            .baseUrl("http://your-api-url/") // Cambia esto a la URL de tu API
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        return retrofit.create(ApiService::class.java)
-    }
-
-    private fun pickImage() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        startActivityForResult(intent, PICK_IMAGE)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_IMAGE && resultCode == RESULT_OK && data != null && data.data != null) {
-            uri = data.data
-            // Cargar la imagen seleccionada y establecerla en imgProfileBitmap
+        if (email == "user@example.com" && password == "password") {  // Simulación de credenciales correctas
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            finish()  // Cierra la actividad de Login para que no pueda volver con el botón de atrás
+        } else {
+            Toast.makeText(this, "Invalid credentials", Toast.LENGTH_SHORT).show()
         }
     }
 
     @Preview(showBackground = true)
     @Composable
     fun PreviewLoginScreen() {
-        LoginScreen()
-    }
-
-    companion object {
-        private const val PICK_IMAGE = 0
+        EverdealsFinalProjectTheme {
+            LoginScreen(logoSize = 350)
+        }
     }
 }
+
+

@@ -1,17 +1,18 @@
 package com.bergman.everdeals_finalproject.models
 
-class Product(
-    var name: String,
-    var link: String,
-    var description: String,
-    var productImage: String,
-    var userId: String,
-    var category: String,
-    var id: String,
-    var previousPrice: Double,
-    var currentPrice: Double,
-    var discount: Double,
-    var likes: Int,
-    var dislikes: Int,
-    var sales: Int
+data class Product(
+    val name: String,
+    val productImage: String,
+    val description: String,
+    val link: String,
+    val userId: String,
+    val category: String,
+    val id: String,
+    val previousPrice: Double,
+    val currentPrice: Double,
+    val discount: Double,
+    val likes: Int,
+    val dislikes: Int,
+    val sales: Int
 )
+

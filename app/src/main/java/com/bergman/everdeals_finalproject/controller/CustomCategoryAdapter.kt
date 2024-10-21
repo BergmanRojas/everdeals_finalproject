@@ -1,38 +1,86 @@
 package com.bergman.everdeals_finalproject.controller
 
-import android.content.Context
-import android.content.Intent
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import com.squareup.picasso.Picasso
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
+import com.bergman.everdeals_finalproject.models.Category
 
-class CustomCategoryAdapter(var context: Context, categories: ArrayList<Category>) :
-    ArrayAdapter<Category?>(context, -1, categories) {
-    var categories: ArrayList<Category> = categories
-
-    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-        val inflater: LayoutInflater =
-            context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val rowCategory: View = inflater.inflate(R.layout.activity_item_category, parent, false)
-        val txtName = rowCategory.findViewById<TextView>(R.id.txtCategory)
-        val imgCategory = rowCategory.findViewById<ImageView>(R.id.imgCategory)
-        val linearCategory: LinearLayout =
-            rowCategory.findViewById(R.id.layoutCategoryActivity)
-        val category: Category = categories[position]
-
-        txtName.text = category.getName() // Update method call to getName()
-        Picasso.get().load(category.getImageUrl()).into(imgCategory) // Update method call to getImageUrl()
-
-        linearCategory.setOnClickListener {
-            val intent = Intent(context, ViewCategory::class.java) // Update target class
-            intent.putExtra("category", category.getName()) // You can pass additional information to the activity if necessary
-            context.startActivity(intent)
+@Composable
+fun CategoriesList(categories: List<Category>, onCategoryClick: (Category) -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        items(categories) { category ->
+            CategoryItem(category = category, onClick = { onCategoryClick(category) })
         }
-        return rowCategory
     }
+}
+
+@Composable
+fun CategoryItem(category: Category, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable { onClick() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Imagen de la categoría
+        Image(
+            painter = rememberAsyncImagePainter(category.imageUrl),
+            contentDescription = category.name,
+            modifier = Modifier.size(64.dp),
+            contentScale = ContentScale.Crop
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Nombre de la categoría
+        Text(
+            text = category.name,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCategoryItem() {
+    val sampleCategory = Category(
+        name = "Tecnología",
+        imageUrl = "https://example.com/category_image.jpg"
+    )
+    CategoryItem(category = sampleCategory, onClick = {})
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCategoriesList() {
+    val sampleCategories = listOf(
+        Category(name = "Electrónica", imageUrl = "https://example.com/electronics.jpg"),
+        Category(name = "Moda", imageUrl = "https://example.com/fashion.jpg"),
+        Category(name = "Hogar", imageUrl = "https://example.com/home.jpg")
+    )
+    CategoriesList(categories = sampleCategories, onCategoryClick = {})
 }
