@@ -35,6 +35,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.res.painterResource
 
+// TODO: Move these colors to a centralized theme file
 val EverdealsBackground = Color(0xFF1A1A1A)
 val EverdealsSurface = Color(0xFF2A2A2A)
 val EverdealsGreen = Color(0xFF00C853)
@@ -52,6 +53,7 @@ fun MainScreenContent(
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
+    // FIXME: This is called every time the screen recomposes. Should be moved to a side effect or ViewModel
     LaunchedEffect(Unit) {
         productViewModel.loadProducts()
     }
@@ -443,7 +445,7 @@ fun DealCard(
                 }
 
                 Button(
-                    onClick = { /* TODO: Implement deal action */ },
+                    onClick = { /* TODO: Implement button action */ },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFF5722)
                     ),
@@ -489,10 +491,12 @@ fun DealCard(
     }
 }
 
+// FIXME: This function should be in a utility class
 private fun calculateDiscount(originalPrice: Double, currentPrice: Double): Int {
     return ((originalPrice - currentPrice) / originalPrice * 100).toInt()
 }
 
+// TODO: Consider moving this function to a utility class
 private fun getStoreName(url: String): String {
     return when {
         url.contains("amazon") -> "Amazon"
@@ -517,8 +521,12 @@ private fun formatTimestamp(timestamp: Timestamp): String {
     }
 }
 
+// NOTE: This is temporary, we need to implement a more secure way to get the user ID
 private fun getCurrentUserId(): String {
-    // Replace this with actual implementation to get current user ID
     return FirebaseAuth.getInstance().currentUser?.uid ?: ""
 }
+
+// TODO: Implement a function to handle image loading errors
+// TODO: Add transition animations between tabs
+// TODO: Optimize product list performance for large amounts of data
 

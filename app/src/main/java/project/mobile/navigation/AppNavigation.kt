@@ -23,7 +23,6 @@ fun AppNavigation() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Initialize repositories and utilities
     val userPreferences = UserPreferences(context)
     val authRepository = AuthRepository(userPreferences)
     val productRepository = ProductRepository(authRepository)

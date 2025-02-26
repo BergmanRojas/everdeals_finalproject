@@ -18,7 +18,6 @@ class RegisterController {
     private val _isRegistered = MutableStateFlow(false)
     val isRegistered: StateFlow<Boolean> = _isRegistered
 
-    // Registrar un nuevo usuario con Firebase
     fun registerUser(email: String, password: String) {
         _isLoading.value = true
         _error.value = null
@@ -27,10 +26,8 @@ class RegisterController {
             .addOnCompleteListener { task ->
                 _isLoading.value = false
                 if (task.isSuccessful) {
-                    // Registro exitoso
                     _isRegistered.value = true
                 } else {
-                    // Error en el registro
                     _error.value = task.exception?.message ?: "Registration failed"
                     Log.e("RegisterController", "Registration failed: ${task.exception}")
                 }
