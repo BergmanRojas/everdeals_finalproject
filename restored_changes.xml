@@ -1,0 +1,46 @@
+<changelist name="Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]" date="1740709846316" recycled="false" toDelete="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/shelved.patch" />
+  <option name="DESCRIPTION" value="Uncommitted changes before Update at 28/02/2025, 02:30 [Changes]" />
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/ic_home.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/ic_home.png" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="app/src/main/res/drawable/menu.png" />
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/ic_settings.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/ic_settings.png" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/backicon.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/backicon.png" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/registerlogo.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/registerlogo.png" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/ic_apple_white.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/ic_apple_white.png" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/ic_welcome_image.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/ic_welcome_image.png" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/ic_user.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/ic_user.png" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/ic_deals.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/ic_deals.png" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="app/src/main/res/drawable/titulo.png" />
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/delivery.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/delivery.png" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="app/src/main/res/drawable/ic_comments.png" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_28_02_2025,_02_30_[Changes]/ic_comments.png" />
+  </binary>
+</changelist>
