@@ -1,4 +1,4 @@
-package project.mobile.model
+package project.mobile.models
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -6,4 +6,3 @@ sealed class AuthState {
     object Success : AuthState()
     data class Error(val message: String) : AuthState()
 }
-
