@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services") version "4.4.2" apply false // Plugin de Google Services
+    id("com.google.gms.google-services") version "4.4.2"
 }
 
 android {
@@ -15,7 +15,6 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -40,14 +39,22 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.6.1" // Actualizado a 1.6.1 para mayor estabilidad con Kotlin 2.0.20
+    }
 }
 
 dependencies {
-    // Dependencias básicas de Android y Compose
+    // Use the BOM to manage Compose dependency versions
+    implementation(platform(libs.androidx.compose.bom)) // This is androidx.compose:compose-bom:2024.04.01
+
+    // Material3 using BOM-managed version
+    implementation("androidx.compose.material3:material3") // Cambiado a notación explícita con BOM
+
+    // Other Compose dependencies (also managed by BOM, so no explicit versions)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
@@ -56,25 +63,25 @@ dependencies {
     implementation(libs.androidx.navigation.common.ktx)
     implementation(libs.androidx.navigation.compose)
 
-    // Firebase BOM (Bill of Materials)
-    implementation(platform(libs.firebase.bom))
+    // ViewModel
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // Dependencias de Firebase
+    // Firebase BOM
+    implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
 
-    // Google Play Services (para Google Sign-In)
+    // Google Play Services
     implementation(libs.play.services.auth)
-
-    // Google Maps Compose Library
     implementation(libs.play.services.location)
 
     // Media3 ExoPlayer
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
 
-    // Coil para cargar imágenes en Compose
+    // Coil
     implementation(libs.coil.compose)
 
     // Testing
@@ -87,13 +94,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation(libs.androidx.datastore.preferences)
-
-    // Added dependencies
     implementation(libs.jsoup)
     implementation(libs.okhttp)
-
     implementation(libs.androidx.material.icons.extended)
 }
-
-apply(plugin = "com.google.gms.google-services") // Aplicar el plugin de Google Services
-

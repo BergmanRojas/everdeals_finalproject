@@ -3,21 +3,24 @@ package project.mobile.models
 import com.google.firebase.Timestamp
 
 data class Product(
-    val id: String = "",
+    val documentId: String = "", // Cambiado de 'id' a 'documentId'
     val name: String = "",
-    val description: String = "",
-    val originalPrice: Double = 0.0,
-    val currentPrice: Double = 0.0,
-    val productImage: String = "",
-    val userId: String = "",
     val category: String = "",
-    val link: String = "",
-    val createdAt: Timestamp = Timestamp.now(),
+    val currentPrice: Double = 0.0,
+    val originalPrice: Double = 0.0,
     val likes: Int = 0,
+    val likedBy: List<String> = emptyList(),
     val dislikes: Int = 0,
-    val likedBy: MutableList<String> = mutableListOf(),
-    val dislikedBy: MutableList<String> = mutableListOf(),
-    val previousPrice: Double = 0.0,
-    val discount: Double = 0.0,
-    val sales: Int = 0
+    val dislikedBy: List<String> = emptyList(),
+    val createdAt: Timestamp? = null,
+    val description: String? = null,
+    val imageUrl: String? = null,
+    val amazonUrl: String? = null,
+    val endDate: String? = null,
+    val startDate: String? = null,
+    val comments: List<String>? = null,
+    val isOnline: Boolean = false,
+    val userId: String? = null,
+    val userName: String? = null,
+    val userPhotoUrl: String? = null
 )
