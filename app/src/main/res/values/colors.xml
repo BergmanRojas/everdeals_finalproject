@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="everdeals_primary">#00FFA3</color>
+    <color name="everdeals_primary_dark">#00CC82</color>
+    <color name="everdeals_secondary">#9D4EDD</color>
+    <color name="everdeals_accent">#FFD700</color>
+    <color name="everdeals_background">#1A1A1A</color>
+    <color name="everdeals_surface">#2A2A2A</color>
+    <color name="everdeals_error">#FF4444</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>
+

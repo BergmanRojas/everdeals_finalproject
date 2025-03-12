@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "416628595193",
+    "project_id": "everdeals-84870",
+    "storage_bucket": "everdeals-84870.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:416628595193:android:c081ee04c88a74f9ccc528",
+        "android_client_info": {
+          "package_name": "project.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "416628595193-gjl40reo08ei7dtlv32mojaa0uiqidq9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "project.mobile",
+            "certificate_hash": "48e987409ab528b4ef051e54a33170f67024ff9b"
+          }
+        },
+        {
+          "client_id": "416628595193-aog9g8sl5gi1p9as35itv76ore9snoda.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCusFstEUlkq195WCWGcH54B51hKVkTdYk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "416628595193-aog9g8sl5gi1p9as35itv76ore9snoda.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
