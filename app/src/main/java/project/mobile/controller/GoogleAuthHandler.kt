@@ -1,62 +1,37 @@
 package project.mobile.controller
 
 import android.content.Context
-import android.content.Intent
-import android.util.Log
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
-import kotlinx.coroutines.tasks.await
-import project.mobile.R
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.IntentSenderRequest
+import com.google.android.gms.auth.api.identity.BeginSignInRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.auth.api.identity.SignInClient
 
 class GoogleAuthHandler(private val context: Context) {
-    private val auth = FirebaseAuth.getInstance()
-    private val googleSignInClient: GoogleSignInClient
+    private val signInClient: SignInClient = Identity.getSignInClient(context)
 
-    init {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
-            .requestEmail()
+    fun startGoogleSignIn(launcher: ActivityResultLauncher<IntentSenderRequest>) {
+        val signInRequest = BeginSignInRequest.builder()
+            .setGoogleIdTokenRequestOptions(
+                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+                    .setSupported(true)
+                    .setServerClientId("YOUR_WEB_CLIENT_ID_FROM_FIREBASE") // Reemplaza con tu Client ID de Firebase
+                    .setFilterByAuthorizedAccounts(false) // Permite elegir cualquier cuenta
+                    .build()
+            )
             .build()
-        googleSignInClient = GoogleSignIn.getClient(context, gso)
+
+        signInClient.beginSignIn(signInRequest)
+            .addOnSuccessListener { result ->
+                val intentSenderRequest = IntentSenderRequest.Builder(result.pendingIntent.intentSender).build()
+                launcher.launch(intentSenderRequest)
+            }
+            .addOnFailureListener { e ->
+                e.printStackTrace()
+            }
     }
 
-    // Obtiene el Intent para iniciar el flujo de autenticación con Google
-    fun getSignInIntent(): Intent {
-        return googleSignInClient.signInIntent
-    }
-
-    // Maneja el resultado del intento de inicio de sesión con Google
-    suspend fun handleSignInResult(data: Intent?): Boolean {
-        return try {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
-            val account = task.getResult(ApiException::class.java)
-            account?.let { firebaseAuthWithGoogle(it) } ?: false
-        } catch (e: ApiException) {
-            Log.e("GoogleAuthHandler", "Google Sign-In failed: ${e.statusCode}", e)
-            false
-        }
-    }
-
-    // Autentica con Firebase usando las credenciales de Google
-    private suspend fun firebaseAuthWithGoogle(account: GoogleSignInAccount): Boolean {
-        return try {
-            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-            val authResult = auth.signInWithCredential(credential).await()
-            authResult.user != null
-        } catch (e: Exception) {
-            Log.e("GoogleAuthHandler", "Firebase authentication failed", e)
-            false
-        }
-    }
-
-    // Cierra la sesión de Google y Firebase
     fun signOut() {
-        auth.signOut()
-        googleSignInClient.signOut()
+        signInClient.signOut()
     }
 }
