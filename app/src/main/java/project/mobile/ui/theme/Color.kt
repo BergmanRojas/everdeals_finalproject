@@ -2,6 +2,7 @@ package project.mobile.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+<<<<<<< HEAD
 // Colores principales usados en el tema
 val Blue001875 = Color(0xFF001875) // Primario
 val OrangeFF6200 = Color(0xFFFF6200) // Secundario
@@ -14,3 +15,12 @@ val RedFF0000 = Color(0xFFFF0000) // Errores
 val YellowFFE100 = Color(0xFFFFE100) // No usado actualmente
 val Purple9046FF = Color(0xFF9046FF) // No usado actualmente
 val YellowGold = Color(0xFFFFCC00) // No usado actualmente
+=======
+val Blue001875 = Color(0xFF001875)
+val RedFF0000 = Color(0xFFFF0000)
+val YellowFFE100 = Color(0xFFFFE100)
+val Purple9046FF = Color(0xFF9046FF)
+val Dark161C2A = Color(0xFF161C2A)
+val WhiteFFFFFF = Color(0xFFFFFFFF)
+val OrangeFF6200 = Color(0xFFFF6200)
+>>>>>>> b42bef80a5310ce8443e2568a67b50c0ffc95e28
