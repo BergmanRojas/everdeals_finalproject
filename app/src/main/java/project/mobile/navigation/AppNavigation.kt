@@ -17,9 +17,11 @@ import project.mobile.model.UserPreferences
 import project.mobile.util.AmazonScraper
 import project.mobile.view.*
 import project.mobile.view.screens.ForgotPasswordScreen
+import project.mobile.view.screens.SplashScreenContent
 import android.app.Application
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -39,28 +41,54 @@ fun AppNavigation(googleSignInLauncher: ActivityResultLauncher<IntentSenderReque
     var isLoggedIn by remember { mutableStateOf(false) }
     var currentUser by remember { mutableStateOf<User?>(null) }
 
-    LaunchedEffect(Unit) {
-        isLoggedIn = authManager.checkSession()
-        if (isLoggedIn) {
-            currentUser = authManager.getCurrentUser()
-            navController.navigate("main") { popUpTo("login") { inclusive = true } }
-        }
-    }
+    NavHost(navController = navController, startDestination = "splash") {
+        composable("splash") {
+            SplashScreenContent()
 
-    NavHost(navController = navController, startDestination = if (isLoggedIn) "main" else "login") {
+            LaunchedEffect(Unit) {
+                // Retraso de 2 segundos para mostrar el splash
+                delay(2000L)
+                // Verificar el estado de autenticación
+                isLoggedIn = authManager.checkSession()
+                if (isLoggedIn) {
+                    currentUser = authManager.getCurrentUser()
+                    navController.navigate("main") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                } else {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
+            }
+        }
+
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
-                onLoginSuccess = { scope.launch { navController.navigate("main") { popUpTo("login") { inclusive = true } } } },
+                onLoginSuccess = {
+                    scope.launch {
+                        navController.navigate("main") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
+                },
                 onNavigateToForgotPassword = { navController.navigate("forgot_password") },
                 authManager = authManager
             )
         }
+
         composable("register") {
             RegisterScreen(
-                onNavigateToLogin = { navController.navigate("login") { popUpTo("register") { inclusive = true } } },
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
+                    }
+                },
                 authManager = authManager,
-                googleAuthHandler = googleAuthHandler.apply { if (googleSignInLauncher != null) startGoogleSignIn(googleSignInLauncher) },
+                googleAuthHandler = googleAuthHandler.apply {
+                    if (googleSignInLauncher != null) startGoogleSignIn(googleSignInLauncher)
+                },
                 appleAuthHandler = appleAuthHandler
             )
         }
@@ -131,4 +159,3 @@ fun AppNavigation(googleSignInLauncher: ActivityResultLauncher<IntentSenderReque
         }
     }
 }
-

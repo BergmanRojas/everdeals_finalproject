@@ -16,7 +16,7 @@ fun SplashScreenContent() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.primary)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Image(
             painter = painterResource(id = R.drawable.loginlogo),
