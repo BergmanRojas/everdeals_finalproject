@@ -10,14 +10,17 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Colores heredados para compatibilidad (si aún los necesitas en otras partes)
-val EverdealsGreen = Color(0xFF00FFA3)
-val EverdealsGreenDark = Color(0xFF00CC82)
-val EverdealsPurple = Color(0xFF9D4EDD)
-val EverdealsYellow = Color(0xFFFFD700)
-val EverdealsRed = Color(0xFFFF4444)
-val EverdealsBackground = Color(0xFF1A1A1A)
-val EverdealsSurface = Color(0xFF2A2A2A)
+// Colores específicos para el gradiente y diseño
+val EverdealsYellow = Color(0xFFFFD700) // Amarillo para el gradiente
+val EverdealsRed = Color(0xFFFF4444)    // Rojo para el gradiente y detalles
+val CircleBackground = Color(0xFF333333).copy(alpha = 0.7f) // Gris oscuro para el círculo
+val BottomNavBackground = Color.White
+val BottomNavSelected = Color(0xFF40C4FF)   // Azul para íconos seleccionados
+val BottomNavIndicator = Color(0xFFE1F5FE)   // Fondo de ítem seleccionado
+val BottomNavBorder = Color.LightGray
+val BottomNavDivider = Color.DarkGray
+val EverdealsBackground = Color(0xFF1A1A1A) // Fondo heredado
+val EverdealsSurface = Color(0xFF2A2A2A)    // Superficie heredada
 
 private val DarkColorScheme = darkColorScheme(
     primary = Blue001875,
@@ -49,7 +52,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun EverDealsTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(), // Usar el tema del sistema por defecto
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
@@ -61,7 +64,7 @@ fun EverDealsTheme(
             WindowCompat.setDecorFitsSystemWindows(window, false)
             val insetsController = WindowCompat.getInsetsController(window, view)
             insetsController.isAppearanceLightStatusBars = !darkTheme
-            window.statusBarColor = colorScheme.background.toArgb() // Usado como fallback
+            window.statusBarColor = colorScheme.background.toArgb()
         }
     }
 
