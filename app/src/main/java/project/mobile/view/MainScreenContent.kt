@@ -32,8 +32,8 @@ import project.mobile.R
 import project.mobile.controller.ProductViewModel
 import project.mobile.model.Product
 import project.mobile.ui.theme.*
-import project.mobile.view.navigations.BottomNavigationBar
-import project.mobile.view.navigations.TopNavigationBar
+import project.mobile.navigation.BottomNavigationBar
+import project.mobile.navigation.TopNavigationBar
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
