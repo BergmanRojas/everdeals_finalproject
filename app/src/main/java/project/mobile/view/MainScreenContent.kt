@@ -94,7 +94,7 @@ fun MainScreenContent(
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.primary,
+                    contentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
                     edgePadding = 0.dp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -102,7 +102,7 @@ fun MainScreenContent(
                     indicator = { tabPositions ->
                         TabRowDefaults.Indicator(
                             modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            color = MaterialTheme.colorScheme.primary
+                            color = OrangeFF6200 // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
                         )
                     }
                 ) {
@@ -110,7 +110,7 @@ fun MainScreenContent(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         text = { Text("Featured") },
-                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -118,7 +118,7 @@ fun MainScreenContent(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
                         text = { Text("Most Voted") },
-                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -126,7 +126,7 @@ fun MainScreenContent(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 },
                         text = { Text("Rising 99+") },
-                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -134,7 +134,7 @@ fun MainScreenContent(
                         selected = selectedTab == 3,
                         onClick = { selectedTab = 3 },
                         text = { Text("New") },
-                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )

@@ -78,7 +78,7 @@ fun TopNavigationBar(
                     Icon(
                         Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = OrangeFF6200, // Cambiado de Blue001875 a OrangeFF6200
                         modifier = Modifier.size(22.dp)
                     )
                 },
@@ -123,7 +123,7 @@ fun TopNavigationBar(
                     .drawBehind {
                         drawCircle(
                             color = CircleBackground,
-                            radius = 8.dp.toPx(),
+                            radius = 12.dp.toPx(),
                             center = Offset(center.x, center.y)
                         )
                     }
