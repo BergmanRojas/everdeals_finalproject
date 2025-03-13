@@ -48,8 +48,6 @@ fun MainScreenContent(
 ) {
     val products by productViewModel.products.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
-    var showSearch by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         productViewModel.loadProducts()
@@ -67,11 +65,7 @@ fun MainScreenContent(
         topBar = {
             TopNavigationBar(
                 productViewModel = productViewModel,
-                navController = navController,
-                showSearch = showSearch,
-                onShowSearchChanged = { newValue -> showSearch = newValue },
-                searchQuery = searchQuery,
-                onSearchQueryChanged = { newQuery -> searchQuery = newQuery }
+                navController = navController
             )
         },
         bottomBar = {
