@@ -356,97 +356,75 @@ fun RegisterScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Botón de Google
-                Button(
-                    onClick = { googleSignInLauncher.launch(googleAuthHandler.getSignInIntent()) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(55.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_google),
-                            contentDescription = "Google Icon",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Sign up with Google",
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Botón de Apple
-                Button(
-                    onClick = {
-                        scope.launch {
-                            val success = appleAuthHandler.signInWithApple()
-                            if (success) {
-                                onNavigateToLogin()
-                            } else {
-                                snackbarHostState.showSnackbar("Apple Sign-In failed")
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(55.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_apple),
-                            contentDescription = "Apple Icon",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Sign up with Apple",
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Texto para navegar al login
-                Column(
+                // Nueva sección: "or register with"
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Already have an account?",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 14.sp
+                    Divider(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        thickness = 1.dp,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Login",
-                        color = MaterialTheme.colorScheme.secondary,
-                        fontSize = 20.sp,
-                        modifier = Modifier
-                            .clickable { onNavigateToLogin() }
-                            .padding(top = 4.dp)
+                        text = "or register with",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    Divider(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        thickness = 1.dp,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Nueva sección: Íconos de Google y Apple
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_google),
+                        contentDescription = "Google Icon",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable { googleSignInLauncher.launch(googleAuthHandler.getSignInIntent()) }
+                    )
+                    Spacer(modifier = Modifier.width(32.dp))
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_apple),
+                        contentDescription = "Apple Icon",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clickable {
+                                scope.launch {
+                                    val success = appleAuthHandler.signInWithApple()
+                                    if (success) {
+                                        snackbarHostState.showSnackbar("Registered with Apple successfully!")
+                                        onNavigateToLogin()
+                                    } else {
+                                        snackbarHostState.showSnackbar("Apple Sign-Up failed")
+                                    }
+                                }
+                            }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Indicador de carga
                 if (authState is AuthState.Loading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
                         color = MaterialTheme.colorScheme.secondary
                     )
                 }

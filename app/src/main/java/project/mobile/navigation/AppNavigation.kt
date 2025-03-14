@@ -19,13 +19,11 @@ import project.mobile.view.*
 import project.mobile.view.screens.ForgotPasswordScreen
 import project.mobile.view.screens.SplashScreenContent
 import android.app.Application
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.IntentSenderRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation(googleSignInLauncher: ActivityResultLauncher<IntentSenderRequest>? = null) {
+fun AppNavigation() { // Eliminamos el parámetro googleSignInLauncher
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -86,9 +84,7 @@ fun AppNavigation(googleSignInLauncher: ActivityResultLauncher<IntentSenderReque
                     }
                 },
                 authManager = authManager,
-                googleAuthHandler = googleAuthHandler.apply {
-                    if (googleSignInLauncher != null) startGoogleSignIn(googleSignInLauncher)
-                },
+                googleAuthHandler = googleAuthHandler, // Simplemente pasamos googleAuthHandler
                 appleAuthHandler = appleAuthHandler
             )
         }
