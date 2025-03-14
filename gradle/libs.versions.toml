@@ -18,6 +18,7 @@ mapsCompose = "6.2.1"  # Versión de Maps Compose
 okhttp = "4.12.0"
 playServicesAuth = "21.2.0"  # Versión de Play Services Auth
 appcompat = "1.7.0"  # Versión de AppCompat
+playServicesAuthVersion = "20.7.0"
 playServicesLocation = "21.3.0"  # Versión de Play Services Location
 media3 = "1.5.0"  # Versión de Media3
 navigationCommonKtx = "2.8.4"  # Versión de Navigation Common KTX
@@ -56,6 +57,7 @@ firebase-storage = { group = "com.google.firebase", name = "firebase-storage-ktx
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+play-services-auth-v2070 = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuthVersion" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 # Media3

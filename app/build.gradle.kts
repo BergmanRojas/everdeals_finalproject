@@ -43,6 +43,8 @@ android {
 }
 
 dependencies {
+    implementation (libs.play.services.auth.v2070)
+
     // Dependencias básicas de Android y Compose
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

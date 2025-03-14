@@ -1,6 +1,8 @@
 package project.mobile.controller
 
+import android.content.Context
 import android.content.Intent
+import androidx.activity.result.ActivityResult
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -8,15 +10,14 @@ import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class GoogleAuthHandler(private val context: android.content.Context) {
+class GoogleAuthHandler(private val context: Context) {
 
-    private lateinit var googleSignInClient: GoogleSignInClient
-
-    init {
+    private val googleSignInClient: GoogleSignInClient by lazy {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("YOUR_WEB_CLIENT_ID") // Reemplaza con tu Web Client ID de Firebase
             .requestEmail()
             .build()
-        googleSignInClient = GoogleSignIn.getClient(context, gso)
+        GoogleSignIn.getClient(context, gso)
     }
 
     fun getSignInIntent(): Intent {
@@ -28,11 +29,11 @@ class GoogleAuthHandler(private val context: android.content.Context) {
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(data)
                 val account = task.getResult(ApiException::class.java)
-                // Aquí puedes manejar la cuenta (por ejemplo, obtener el ID o email)
-                // y autenticar con Firebase si lo deseas
+                // Aquí puedes integrar con Firebase Authentication si lo deseas
+                // Ejemplo: FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(account.idToken, null))
                 true // Retorna true si la autenticación fue exitosa
             } catch (e: ApiException) {
-                // Manejar error
+                e.printStackTrace()
                 false
             }
         }
