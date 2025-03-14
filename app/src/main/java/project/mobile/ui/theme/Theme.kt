@@ -23,8 +23,8 @@ val EverdealsBackground = Color(0xFF1A1A1A) // Fondo heredado
 val EverdealsSurface = Color(0xFF2A2A2A)    // Superficie heredada
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Blue001875,
-    secondary = OrangeFF6200,
+    primary = OrangeFF6200,
+    secondary = Blue001875,
     background = Dark161C2A,
     surface = Color(0xFF2A2E38),
     surfaceVariant = Color(0xFF3A3F4A),

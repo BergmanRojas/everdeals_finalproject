@@ -181,7 +181,7 @@ fun LoginScreen(
 
                     Text(
                         text = "Create Account",
-                        color = MaterialTheme.colorScheme.secondary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 20.sp,
                         modifier = Modifier
                             .clickable { onNavigateToRegister() }

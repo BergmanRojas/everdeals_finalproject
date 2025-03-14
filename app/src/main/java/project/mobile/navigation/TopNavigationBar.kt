@@ -42,7 +42,7 @@ fun TopNavigationBar(
                     colors = listOf(EverdealsYellow, EverdealsRed)
                 )
             )
-            .padding(top = 40.dp, bottom = 12.dp)
+            .padding(top = 40.dp, bottom = 0.dp) // Reducido de 12.dp a 0.dp
     ) {
         // Barra de búsqueda
         Box(
@@ -146,12 +146,12 @@ fun TopNavigationBar(
             }
         }
 
-
+        // Botones con scroll horizontal, sin fondo y con padding vertical reducido
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 1.dp), // Reducido de 8.dp a 2.dp
+                .padding(horizontal = 8.dp, vertical = 0.dp), // Reducido de 1.dp a 0.dp
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // Categories
