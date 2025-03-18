@@ -126,7 +126,7 @@ fun AppNavigation() { // Eliminamos el parámetro googleSignInLauncher
         composable("profile") {
             ProfileScreen(
                 onNavigateToSettings = { navController.navigate("settings") },
-                onSignOut = {
+                    onSignOut = {
                     scope.launch {
                         authManager.signOut()
                         currentUser = null

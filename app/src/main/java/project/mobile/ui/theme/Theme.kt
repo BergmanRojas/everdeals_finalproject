@@ -1,12 +1,14 @@
 package project.mobile.ui.theme
 
 import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -24,47 +26,50 @@ val EverdealsSurface = Color(0xFF2A2A2A)    // Superficie heredada
 
 private val DarkColorScheme = darkColorScheme(
     primary = OrangeFF6200,
-    secondary = Blue001875,
-    background = Dark161C2A,
-    surface = Color(0xFF2A2E38),
-    surfaceVariant = Color(0xFF3A3F4A),
-    onPrimary = WhiteFFFFFF,
-    onSecondary = WhiteFFFFFF,
-    onBackground = WhiteFFFFFF,
-    onSurface = WhiteFFFFFF,
-    onSurfaceVariant = Color(0xFFD1D5DB),
-    error = RedFF0000
+    secondary = OrangeFF6200,
+    tertiary = OrangeFF6200,
+    background = Color(0xFF1A1A1A),
+    surface = Color(0xFF2A2A2A),
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Blue001875,
+    primary = OrangeFF6200,
     secondary = OrangeFF6200,
-    background = WhiteFFFFFF,
-    surface = Color(0xFFF5F5F5),
-    surfaceVariant = Color(0xFFE5E7EB),
-    onPrimary = WhiteFFFFFF,
-    onSecondary = WhiteFFFFFF,
-    onBackground = Black,
-    onSurface = Black,
-    onSurfaceVariant = Color(0xFF4B5563),
-    error = RedFF0000
+    tertiary = OrangeFF6200,
+    background = Color(0xFF1A1A1A),
+    surface = Color(0xFF2A2A2A),
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White,
 )
 
 @Composable
 fun EverDealsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
     val view = LocalView.current
-
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            val insetsController = WindowCompat.getInsetsController(window, view)
-            insetsController.isAppearanceLightStatusBars = !darkTheme
-            window.statusBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = colorScheme.primary.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
         }
     }
 

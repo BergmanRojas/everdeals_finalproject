@@ -1,6 +1,7 @@
 package project.mobile.view
 
 import android.os.Build
+import android.os.Build.VERSION_CODES
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,9 +44,184 @@ import project.mobile.model.Product
 import java.util.UUID
 import android.widget.Toast
 import project.mobile.controller.AuthManager
-import project.mobile.model.AuthState  // Añade esta línea
+import project.mobile.model.AuthState
 import java.text.SimpleDateFormat
 import java.util.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FinalDetailsScreen(
+    startDate: String,
+    onStartDateChange: (String) -> Unit,
+    endDate: String,
+    onEndDateChange: (String) -> Unit,
+    category: String,
+    onCategoryChange: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Final Details",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        OutlinedTextField(
+            value = startDate,
+            onValueChange = onStartDateChange,
+            label = { Text("Start Date") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFF2A2A2A),
+                unfocusedContainerColor = Color(0xFF2A2A2A),
+                disabledContainerColor = Color(0xFF2A2A2A),
+                focusedBorderColor = Color(0xFF9D4EDD),
+                unfocusedBorderColor = Color.Gray,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedLabelColor = Color(0xFF9D4EDD),
+                unfocusedLabelColor = Color.Gray
+            ),
+            trailingIcon = {
+                IconButton(onClick = { showStartDatePicker = true }) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Select start date",
+                        tint = Color(0xFF9D4EDD)
+                    )
+                }
+            },
+            readOnly = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = endDate,
+            onValueChange = onEndDateChange,
+            label = { Text("End Date") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFF2A2A2A),
+                unfocusedContainerColor = Color(0xFF2A2A2A),
+                disabledContainerColor = Color(0xFF2A2A2A),
+                focusedBorderColor = Color(0xFF9D4EDD),
+                unfocusedBorderColor = Color.Gray,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedLabelColor = Color(0xFF9D4EDD),
+                unfocusedLabelColor = Color.Gray
+            ),
+            trailingIcon = {
+                IconButton(onClick = { showEndDatePicker = true }) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Select end date",
+                        tint = Color(0xFF9D4EDD)
+                    )
+                }
+            },
+            readOnly = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = category,
+            onValueChange = onCategoryChange,
+            label = { Text("Category") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFF2A2A2A),
+                unfocusedContainerColor = Color(0xFF2A2A2A),
+                disabledContainerColor = Color(0xFF2A2A2A),
+                focusedBorderColor = Color(0xFF9D4EDD),
+                unfocusedBorderColor = Color.Gray,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedLabelColor = Color(0xFF9D4EDD),
+                unfocusedLabelColor = Color.Gray
+            )
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Button(
+            onClick = onSubmit,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9D4EDD))
+        ) {
+            Text("Submit")
+        }
+    }
+
+    if (showStartDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            .format(Date(millis))
+                        onStartDateChange(date)
+                    }
+                    showStartDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false
+            )
+        }
+    }
+
+    if (showEndDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            .format(Date(millis))
+                        onEndDateChange(date)
+                    }
+                    showEndDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,7 +352,8 @@ fun AddProductScreen(
                     onImageSelected = {
                         selectedImageUrl = it
                         currentStep++
-                    }
+                    },
+                    onCategoryExtracted = { category = it }
                 )
                 3 -> ProductDetailsScreen(
                     title = title,
@@ -348,7 +525,8 @@ fun AmazonLinkScreen(
 @Composable
 fun ImageSelectionScreen(
     scrapingState: ProductViewModel.ScrapingState,
-    onImageSelected: (String) -> Unit
+    onImageSelected: (String) -> Unit,
+    onCategoryExtracted: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -365,6 +543,10 @@ fun ImageSelectionScreen(
 
         when (scrapingState) {
             is ProductViewModel.ScrapingState.Success -> {
+                LaunchedEffect(scrapingState.category) {
+                    onCategoryExtracted(scrapingState.category)
+                }
+                
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -593,148 +775,11 @@ fun DescriptionScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FinalDetailsScreen(
-    startDate: String,
-    onStartDateChange: (String) -> Unit,
-    endDate: String,
-    onEndDateChange: (String) -> Unit,
-    category: String,
-    onCategoryChange: (String) -> Unit,
-    onSubmit: () -> Unit
-) {
-    var showStartDatePicker by remember { mutableStateOf(false) }
-    var showEndDatePicker by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Final Details",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        OutlinedTextField(
-            value = startDate,
-            onValueChange = onStartDateChange,
-            label = { Text("Start Date") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFF2A2A2A),
-                unfocusedContainerColor = Color(0xFF2A2A2A),
-                disabledContainerColor = Color(0xFF2A2A2A),
-                focusedBorderColor = Color(0xFF9D4EDD),
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedLabelColor = Color(0xFF9D4EDD),
-                unfocusedLabelColor = Color.Gray
-            ),
-            trailingIcon = {
-                IconButton(onClick = { showStartDatePicker = true }) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = "Select start date",
-                        tint = Color(0xFF9D4EDD)
-                    )
-                }
-            },
-            readOnly = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = endDate,
-            onValueChange = onEndDateChange,
-            label = { Text("End Date") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFF2A2A2A),
-                unfocusedContainerColor = Color(0xFF2A2A2A),
-                disabledContainerColor = Color(0xFF2A2A2A),
-                focusedBorderColor = Color(0xFF9D4EDD),
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedLabelColor = Color(0xFF9D4EDD),
-                unfocusedLabelColor = Color.Gray
-            ),
-            trailingIcon = {
-                IconButton(onClick = { showEndDatePicker = true }) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = "Select end date",
-                        tint = Color(0xFF9D4EDD)
-                    )
-                }
-            },
-            readOnly = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = category,
-            onValueChange = onCategoryChange,
-            label = { Text("Category") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFF2A2A2A),
-                unfocusedContainerColor = Color(0xFF2A2A2A),
-                disabledContainerColor = Color(0xFF2A2A2A),
-                focusedBorderColor = Color(0xFF9D4EDD),
-                unfocusedBorderColor = Color.Gray,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedLabelColor = Color(0xFF9D4EDD),
-                unfocusedLabelColor = Color.Gray
-            )
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Button(
-            onClick = onSubmit,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9D4EDD))
-        ) {
-            Text("Submit")
-        }
-    }
-
-    if (showStartDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showStartDatePicker = false },
-            onDateSelected = {
-                onStartDateChange(it)
-                showStartDatePicker = false
-            }
-        )
-    }
-
-    if (showEndDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showEndDatePicker = false },
-            onDateSelected = {
-                onEndDateChange(it)
-                showEndDatePicker = false
-            }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun DatePickerDialog(
     onDismissRequest: () -> Unit,
     onDateSelected: (String) -> Unit
 ) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    if (Build.VERSION.SDK_INT >= VERSION_CODES.O) {
         val datePickerState = rememberDatePickerState()
 
         androidx.compose.material3.DatePickerDialog(
@@ -742,7 +787,6 @@ fun DatePickerDialog(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        // Use SimpleDateFormat instead of LocalDate for better compatibility
                         val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                             .format(Date(millis))
                         onDateSelected(date)
@@ -764,7 +808,6 @@ fun DatePickerDialog(
             )
         }
     } else {
-        // Fallback for older Android versions
         val context = LocalContext.current
         val calendar = Calendar.getInstance()
 

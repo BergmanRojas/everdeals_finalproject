@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -34,6 +35,7 @@ import project.mobile.model.Product
 import project.mobile.ui.theme.*
 import project.mobile.navigation.BottomNavigationBar
 import project.mobile.navigation.TopNavigationBar
+import project.mobile.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,7 +96,7 @@ fun MainScreenContent(
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
-                    contentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
+                    contentColor = OrangeFF6200,
                     edgePadding = 0.dp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -102,7 +104,7 @@ fun MainScreenContent(
                     indicator = { tabPositions ->
                         TabRowDefaults.Indicator(
                             modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            color = OrangeFF6200 // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
+                            color = OrangeFF6200
                         )
                     }
                 ) {
@@ -110,7 +112,7 @@ fun MainScreenContent(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         text = { Text("Featured") },
-                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
+                        selectedContentColor = OrangeFF6200,
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -118,7 +120,7 @@ fun MainScreenContent(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
                         text = { Text("Most Voted") },
-                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
+                        selectedContentColor = OrangeFF6200,
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -126,7 +128,7 @@ fun MainScreenContent(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 },
                         text = { Text("Rising 99+") },
-                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
+                        selectedContentColor = OrangeFF6200,
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -134,7 +136,7 @@ fun MainScreenContent(
                         selected = selectedTab == 3,
                         onClick = { selectedTab = 3 },
                         text = { Text("New") },
-                        selectedContentColor = OrangeFF6200, // Cambiado de MaterialTheme.colorScheme.primary a OrangeFF6200
+                        selectedContentColor = OrangeFF6200,
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
@@ -150,10 +152,13 @@ fun MainScreenContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(products) { product ->
-                        DealCard(
+                        ProductCard(
                             product = product,
-                            onLikeDislike = { productId, isLike ->
-                                productViewModel.toggleLikeDislike(productId, isLike)
+                            onProductClick = { productId ->
+                                navController.navigate(route = Screen.ProductDetail.createRoute(productId))
+                            },
+                            onLikeDislike = { id, isLike ->
+                                productViewModel.toggleLikeDislike(id, isLike)
                             }
                         )
                     }
@@ -164,74 +169,79 @@ fun MainScreenContent(
 }
 
 @Composable
-fun DealCard(
+fun ProductCard(
     product: Product,
+    onProductClick: (String) -> Unit,
     onLikeDislike: (String, Boolean) -> Unit
 ) {
-    val context = LocalContext.current
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            .clickable { onProductClick(product.id) },
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1A1A1A)
+        ),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { onLikeDislike(product.id, false) }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Dislike",
-                            tint = if (product.dislikedBy.contains(getCurrentUserId())) EverdealsRed else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Text(
-                        text = "${product.likes - product.dislikes}°",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 14.sp
-                    )
-                    IconButton(onClick = { onLikeDislike(product.id, true) }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropUp,
-                            contentDescription = "Like",
-                            tint = if (product.likedBy.contains(getCurrentUserId())) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Text(
-                    text = formatTimestamp(product.createdAt),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Imagen con overlay de descuento
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
             ) {
                 AsyncImage(
-                    model = product.imageUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(product.imageUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Product image",
                     modifier = Modifier
-                        .size(100.dp)
+                        .fillMaxSize()
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
+                
+                // Descuento overlay
+                Surface(
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .align(Alignment.TopEnd),
+                    color = EverdealsRed.copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = "-${calculateDiscount(product.originalPrice, product.currentPrice)}%",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            // Contenido (título, precios, votos)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(120.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Título y precios
                 Column {
                     Text(
                         text = product.name,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = Color.White,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Spacer(modifier = Modifier.height(6.dp))
+                    
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -244,87 +254,86 @@ fun DealCard(
                         )
                         Text(
                             text = "${product.originalPrice}€",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = Color.Gray,
                             fontSize = 14.sp,
                             textDecoration = TextDecoration.LineThrough
                         )
+                    }
+                }
+
+                // Info adicional (usuario, tiempo y votos)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Usuario y tiempo
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(product.userPhotoUrl.ifEmpty { R.drawable.default_avatar })
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "User avatar",
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape),
+                            fallback = painterResource(id = R.drawable.default_avatar),
+                            error = painterResource(id = R.drawable.default_avatar)
+                        )
                         Text(
-                            text = "-${calculateDiscount(product.originalPrice, product.currentPrice)}%",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 14.sp
+                            text = "${product.userName} · ${formatTimestamp(product.createdAt)}",
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Available at ${getStoreName(product.amazonUrl)}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
+                    
+                    // Votos
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = { onLikeDislike(product.id, false) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Dislike",
+                                tint = if (product.dislikedBy.contains(getCurrentUserId())) 
+                                    EverdealsRed 
+                                else 
+                                    Color.Gray,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Text(
+                            text = "${product.likes - product.dislikes}°",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(
+                            onClick = { onLikeDislike(product.id, true) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.ArrowDropUp,
+                                contentDescription = "Like",
+                                tint = if (product.likedBy.contains(getCurrentUserId())) 
+                                    MaterialTheme.colorScheme.primary 
+                                else 
+                                    Color.Gray,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Comment,
-                        contentDescription = "Comments",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = "0",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                }
-                Button(
-                    onClick = { /* TODO: Implement button action */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = EverdealsRed),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text("Go to deal", color = MaterialTheme.colorScheme.onPrimary)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(product.userPhotoUrl.ifEmpty { R.drawable.default_avatar })
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "User avatar",
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape),
-                    fallback = painterResource(id = R.drawable.default_avatar),
-                    error = painterResource(id = R.drawable.default_avatar)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Posted by ",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = product.userName.ifEmpty { "Anonymous" },
-                    color = EverdealsRed,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
             }
         }
     }

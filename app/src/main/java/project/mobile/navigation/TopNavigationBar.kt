@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,6 +21,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -33,6 +36,9 @@ fun TopNavigationBar(
     navController: NavController
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    val categories by productViewModel.categories.collectAsState()
+    val selectedCategory by productViewModel.selectedCategory.collectAsState()
 
     Column(
         modifier = Modifier
@@ -42,9 +48,9 @@ fun TopNavigationBar(
                     colors = listOf(EverdealsYellow, EverdealsRed)
                 )
             )
-            .padding(top = 40.dp, bottom = 0.dp) // Reducido de 12.dp a 0.dp
+            .padding(top = 40.dp, bottom = 0.dp) // Reduced from 12.dp to 0.dp
     ) {
-        // Barra de búsqueda
+        // Search bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -146,17 +152,17 @@ fun TopNavigationBar(
             }
         }
 
-        // Botones con scroll horizontal, sin fondo y con padding vertical reducido
+        // Horizontal scrollable buttons with reduced vertical padding
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 0.dp), // Reducido de 1.dp a 0.dp
+                .padding(horizontal = 8.dp, vertical = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // Categories
             TextButton(
-                onClick = { /* TODO: Implementar acción para Categories */ },
+                onClick = { showCategoryDialog = true },
                 modifier = Modifier
             ) {
                 Row(
@@ -166,21 +172,23 @@ fun TopNavigationBar(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_categories),
                         contentDescription = "Categories",
-                        tint = Color.Unspecified,
+                        tint = if (selectedCategory != null) OrangeFF6200 else Color.Unspecified,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Categories",
-                        color = Color.Black,
+                        text = selectedCategory ?: "Categories",
+                        color = if (selectedCategory != null) OrangeFF6200 else Color.Black,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = null,
-                        tint = Color.Black,
+                        tint = if (selectedCategory != null) OrangeFF6200 else Color.Black,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -188,7 +196,7 @@ fun TopNavigationBar(
 
             // Coupons
             TextButton(
-                onClick = { /* TODO: Implementar acción para Coupons */ },
+                onClick = { /* TODO: Implement action for Coupons */ },
                 modifier = Modifier
             ) {
                 Row(
@@ -220,7 +228,7 @@ fun TopNavigationBar(
 
             // Deals
             TextButton(
-                onClick = { /* TODO: Implementar acción para Deals */ },
+                onClick = { /* TODO: Implement action for Deals */ },
                 modifier = Modifier
             ) {
                 Row(
@@ -252,7 +260,7 @@ fun TopNavigationBar(
 
             // Free
             TextButton(
-                onClick = { /* TODO: Implementar acción para Free */ },
+                onClick = { /* TODO: Implement action for Free */ },
                 modifier = Modifier
             ) {
                 Row(
@@ -284,7 +292,7 @@ fun TopNavigationBar(
 
             // Forum
             TextButton(
-                onClick = { /* TODO: Implementar acción para Forum */ },
+                onClick = { /* TODO: Implement action for Forum */ },
                 modifier = Modifier
             ) {
                 Row(
@@ -314,5 +322,49 @@ fun TopNavigationBar(
                 }
             }
         }
+    }
+
+    // Category selection dialog
+    if (showCategoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showCategoryDialog = false },
+            title = { Text("Select category") },
+            text = {
+                LazyColumn {
+                    item {
+                        TextButton(
+                            onClick = {
+                                productViewModel.setSelectedCategory(null)
+                                showCategoryDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "All categories",
+                                color = if (selectedCategory == null) OrangeFF6200 else Color.White
+                            )
+                        }
+                    }
+                    items(categories) { category ->
+                        TextButton(
+                            onClick = {
+                                productViewModel.setSelectedCategory(category)
+                                showCategoryDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                category,
+                                color = if (category == selectedCategory) OrangeFF6200 else Color.White
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            containerColor = Color(0xFF2A2A2A),
+            titleContentColor = Color.White,
+            textContentColor = Color.White
+        )
     }
 }
