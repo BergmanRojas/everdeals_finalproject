@@ -30,8 +30,8 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = Color(0xFF3A3F4A),
     onPrimary = WhiteFFFFFF,
     onSecondary = WhiteFFFFFF,
-    onBackground = WhiteFFFFFF,
-    onSurface = WhiteFFFFFF,
+    onBackground = WhiteFFFFFF, // Blanco en modo oscuro
+    onSurface = WhiteFFFFFF,    // Blanco en modo oscuro
     onSurfaceVariant = Color(0xFFD1D5DB),
     error = RedFF0000
 )

@@ -1,9 +1,11 @@
 package project.mobile.navigation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,103 +14,250 @@ import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import project.mobile.ui.theme.*
+import project.mobile.ui.theme.BottomNavBackground
+import project.mobile.ui.theme.Dark161C2A
+import project.mobile.ui.theme.OrangeFF6200
 
 @Composable
 fun BottomNavigationBar(
     navController: NavController,
     onAddProductClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    selectedItem: String,
+    onItemSelected: (String) -> Unit
 ) {
-    NavigationBar(
-        containerColor = BottomNavBackground,
-        contentColor = BottomNavSelected,
-        modifier = Modifier
-            .height(80.dp)
-            .border(width = 1.dp, color = BottomNavBorder, shape = RoundedCornerShape(0.dp))
-    ) {
-        Box(modifier = Modifier.height(2.dp)) {
-            HorizontalDivider(
-                color = BottomNavDivider,
-                thickness = 1.dp,
-                modifier = Modifier.matchParentSize()
-            )
-        }
+    val borderColor = if (isSystemInDarkTheme()) Color(0xFFCCCCCC) else Color(0xFF666666)
 
+    NavigationBar(
+        containerColor = if (isSystemInDarkTheme()) Dark161C2A else BottomNavBackground,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp)
+            .drawBehind {
+                drawLine(
+                    color = borderColor,
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, 0f),
+                    strokeWidth = 2.dp.toPx()
+                )
+            }
+    ) {
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Menu, contentDescription = "Menu", modifier = Modifier.size(32.dp)) },
-            label = { Text("Menu") },
-            selected = false,
-            onClick = { /* Sin acción por ahora */ },
+            selected = selectedItem == "Menu",
+            onClick = {
+                navController.navigate("main") {
+                    popUpTo("main") { inclusive = false }
+                    launchSingleTop = true
+                }
+                onItemSelected("Menu")
+            },
+            icon = {
+                Box(
+                    modifier = if (selectedItem == "Menu") Modifier
+                        .background(
+                            color = OrangeFF6200.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(6.dp)
+                    else Modifier
+                        .padding(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        modifier = Modifier.size(34.dp),
+                        tint = if (selectedItem == "Menu") Color.White else MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            label = {
+                Text(
+                    text = "Menu",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selectedItem == "Menu") OrangeFF6200 else MaterialTheme.colorScheme.onBackground
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = BottomNavSelected,
-                selectedTextColor = BottomNavSelected,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = BottomNavIndicator
-            ),
-            modifier = Modifier.background(color = BottomNavIndicator, shape = RoundedCornerShape(12.dp))
+                selectedIconColor = Color.White,
+                selectedTextColor = OrangeFF6200,
+                unselectedIconColor = MaterialTheme.colorScheme.onBackground,
+                unselectedTextColor = MaterialTheme.colorScheme.onBackground,
+                indicatorColor = Color.Transparent
+            )
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Notifications, contentDescription = "My Alerts", modifier = Modifier.size(32.dp)) },
-            label = { Text("My Alerts") },
-            selected = false,
-            onClick = { /* Sin acción por ahora */ },
+            selected = selectedItem == "My Alerts",
+            onClick = {
+                onItemSelected("My Alerts")
+                // TODO: Añadir navegación si "My Alerts" tiene una ruta específica
+            },
+            icon = {
+                Box(
+                    modifier = if (selectedItem == "My Alerts") Modifier
+                        .background(
+                            color = OrangeFF6200.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(6.dp)
+                    else Modifier
+                        .padding(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Notifications,
+                        contentDescription = "My Alerts",
+                        modifier = Modifier.size(34.dp),
+                        tint = if (selectedItem == "My Alerts") Color.White else MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            label = {
+                Text(
+                    text = "My Alerts",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selectedItem == "My Alerts") OrangeFF6200 else MaterialTheme.colorScheme.onBackground
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = BottomNavSelected,
-                selectedTextColor = BottomNavSelected,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = BottomNavIndicator
-            ),
-            modifier = Modifier.background(color = BottomNavIndicator, shape = RoundedCornerShape(12.dp))
+                selectedIconColor = Color.White,
+                selectedTextColor = OrangeFF6200,
+                unselectedIconColor = MaterialTheme.colorScheme.onBackground,
+                unselectedTextColor = MaterialTheme.colorScheme.onBackground,
+                indicatorColor = Color.Transparent
+            )
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Add, contentDescription = "Share", modifier = Modifier.size(32.dp)) },
-            label = { Text("Share") },
-            selected = false,
-            onClick = onAddProductClick,
+            selected = selectedItem == "Share",
+            onClick = {
+                onItemSelected("Share")
+                onAddProductClick()
+            },
+            icon = {
+                Box(
+                    modifier = if (selectedItem == "Share") Modifier
+                        .background(
+                            color = OrangeFF6200.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(6.dp)
+                    else Modifier
+                        .padding(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Share",
+                        modifier = Modifier.size(34.dp),
+                        tint = if (selectedItem == "Share") Color.White else MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            label = {
+                Text(
+                    text = "Share",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selectedItem == "Share") OrangeFF6200 else MaterialTheme.colorScheme.onBackground
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = BottomNavSelected,
-                selectedTextColor = BottomNavSelected,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = BottomNavIndicator
-            ),
-            modifier = Modifier.background(color = BottomNavIndicator, shape = RoundedCornerShape(12.dp))
+                selectedIconColor = Color.White,
+                selectedTextColor = OrangeFF6200,
+                unselectedIconColor = MaterialTheme.colorScheme.onBackground,
+                unselectedTextColor = MaterialTheme.colorScheme.onBackground,
+                indicatorColor = Color.Transparent
+            )
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Mail, contentDescription = "Inbox", modifier = Modifier.size(32.dp)) },
-            label = { Text("Inbox") },
-            selected = false,
-            onClick = { /* Sin acción por ahora */ },
+            selected = selectedItem == "Inbox",
+            onClick = {
+                onItemSelected("Inbox")
+                // TODO: Añadir navegación si "Inbox" tiene una ruta específica
+            },
+            icon = {
+                Box(
+                    modifier = if (selectedItem == "Inbox") Modifier
+                        .background(
+                            color = OrangeFF6200.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(6.dp)
+                    else Modifier
+                        .padding(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Mail,
+                        contentDescription = "Inbox",
+                        modifier = Modifier.size(34.dp),
+                        tint = if (selectedItem == "Inbox") Color.White else MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            label = {
+                Text(
+                    text = "Inbox",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selectedItem == "Inbox") OrangeFF6200 else MaterialTheme.colorScheme.onBackground
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = BottomNavSelected,
-                selectedTextColor = BottomNavSelected,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = BottomNavIndicator
-            ),
-            modifier = Modifier.background(color = BottomNavIndicator, shape = RoundedCornerShape(12.dp))
+                selectedIconColor = Color.White,
+                selectedTextColor = OrangeFF6200,
+                unselectedIconColor = MaterialTheme.colorScheme.onBackground,
+                unselectedTextColor = MaterialTheme.colorScheme.onBackground,
+                indicatorColor = Color.Transparent
+            )
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile", modifier = Modifier.size(32.dp)) },
-            label = { Text("Profile") },
-            selected = false,
-            onClick = onProfileClick,
+            selected = selectedItem == "Profile",
+            onClick = {
+                onItemSelected("Profile")
+                onProfileClick()
+            },
+            icon = {
+                Box(
+                    modifier = if (selectedItem == "Profile") Modifier
+                        .background(
+                            color = OrangeFF6200.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(6.dp)
+                    else Modifier
+                        .padding(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = "Profile",
+                        modifier = Modifier.size(34.dp),
+                        tint = if (selectedItem == "Profile") Color.White else MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            },
+            label = {
+                Text(
+                    text = "Profile",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selectedItem == "Profile") OrangeFF6200 else MaterialTheme.colorScheme.onBackground
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = BottomNavSelected,
-                selectedTextColor = BottomNavSelected,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = BottomNavIndicator
-            ),
-            modifier = Modifier.background(color = BottomNavIndicator, shape = RoundedCornerShape(12.dp))
+                selectedIconColor = Color.White,
+                selectedTextColor = OrangeFF6200,
+                unselectedIconColor = MaterialTheme.colorScheme.onBackground,
+                unselectedTextColor = MaterialTheme.colorScheme.onBackground,
+                indicatorColor = Color.Transparent
+            )
         )
     }
 }

@@ -6,9 +6,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Permisos para acceder al almacenamiento externo (para seleccionar imágenes) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <!-- Para Android 13 (API 33) y superiores -->
+    <!-- Permisos para acceder a la galería -->
+    <!-- Para Android 12 y anteriores (hasta API 32) -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- Para Android 13 y superiores (API 33+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <application
@@ -48,4 +51,3 @@
     </application>
 
 </manifest>
-

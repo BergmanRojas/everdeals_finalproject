@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AppInsightsSettings">
-    <option name="selectedTabId" value="Firebase Crashlytics" />
-<<<<<<< HEAD
     <option name="tabSettings">
       <map>
         <entry key="Firebase Crashlytics">
@@ -24,7 +22,5 @@
         </entry>
       </map>
     </option>
-=======
->>>>>>> b42bef80a5310ce8443e2568a67b50c0ffc95e28
   </component>
 </project>

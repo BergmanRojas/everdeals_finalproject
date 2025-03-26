@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services") version "4.4.2" apply false // Plugin de Google Services
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 android {
@@ -43,9 +43,26 @@ android {
 }
 
 dependencies {
-    implementation (libs.play.services.auth.v2070)
+    // Firebase dependencies
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
 
-    // Dependencias básicas de Android y Compose
+    // Google Play Services (for Google Sign-In)
+    implementation(libs.play.services.auth)
+
+    // Google Maps Compose Library
+    implementation(libs.play.services.location)
+
+    // Media3 ExoPlayer
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+
+    // Coil for image loading in Compose
+    implementation(libs.coil.compose)
+
+    // Android and Compose dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -58,28 +75,21 @@ dependencies {
     implementation(libs.androidx.navigation.common.ktx)
     implementation(libs.androidx.navigation.compose)
 
-    // Firebase BOM (Bill of Materials)
-    implementation(platform(libs.firebase.bom))
+    // DataStore for preferences
+    implementation(libs.androidx.datastore.preferences)
 
-    // Dependencias de Firebase
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
+    // Additional libraries
+    implementation(libs.jsoup)
+    implementation(libs.okhttp)
 
-    // Google Play Services (para Google Sign-In)
-    implementation(libs.play.services.auth)
+    // Material Icons Extended
+    implementation(libs.androidx.material.icons.extended)
 
-    // Google Maps Compose Library
-    implementation(libs.play.services.location)
+    // ViewModel Compose (for viewModel() in Compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.room.ktx)
 
-    // Media3 ExoPlayer
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.ui)
-
-    // Coil para cargar imágenes en Compose
-    implementation(libs.coil.compose)
-
-    // Testing
+    // Testing dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -87,15 +97,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    implementation(libs.androidx.datastore.preferences)
-
-    // Added dependencies
-    implementation(libs.jsoup)
-    implementation(libs.okhttp)
-
-    implementation(libs.androidx.material.icons.extended)
 }
 
-apply(plugin = "com.google.gms.google-services") // Aplicar el plugin de Google Services
+apply(plugin = "com.google.gms.google-services")
 

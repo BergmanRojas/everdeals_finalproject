@@ -8,9 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import project.mobile.model.AuthRepository
-import project.mobile.model.UserPreferences
 import project.mobile.model.AuthState
 import project.mobile.model.User
+import project.mobile.model.UserPreferences
 
 class AuthManager(
     private val repository: AuthRepository,
@@ -64,7 +64,8 @@ class AuthManager(
                 userPreferences.setLoggedIn(true)
                 _authState.value = AuthState.Success
             } else {
-                _authState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
+                _authState.value =
+                    AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
             }
         } catch (e: Exception) {
             _authState.value = AuthState.Error(e.message ?: "Unknown error")
@@ -79,7 +80,8 @@ class AuthManager(
                 userPreferences.setLoggedIn(true)
                 _authState.value = AuthState.Success
             } else {
-                _authState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
+                _authState.value =
+                    AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
             }
         } catch (e: Exception) {
             _authState.value = AuthState.Error(e.message ?: "Unknown error")
@@ -94,16 +96,19 @@ class AuthManager(
 
     suspend fun getCurrentUser(): User? {
         return try {
+            Log.d("AuthManager", "Attempting to get current user")
             val user = repository.getCurrentUser()
             if (user == null) {
+                Log.e("AuthManager", "No current user found in repository")
                 _authState.value = AuthState.Idle
+            } else {
+                Log.d("AuthManager", "Current user found: $user")
             }
             user
         } catch (e: Exception) {
-            Log.e("AuthManager", "Error getting current user", e)
+            Log.e("AuthManager", "Error getting current user: ${e.message}", e)
             _authState.value = AuthState.Error(e.message ?: "Failed to get current user")
             null
         }
     }
 }
-

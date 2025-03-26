@@ -1,11 +1,20 @@
 package project.mobile.view
 
 import android.os.Build
-import androidx.annotation.RequiresApi
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -16,36 +25,55 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Discount
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import project.mobile.controller.ProductViewModel
 import coil.compose.AsyncImage
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.SelectableDates
-import java.time.LocalDate
-import java.time.ZoneId
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
-import project.mobile.model.Product
-import java.util.UUID
-import android.widget.Toast
 import project.mobile.controller.AuthManager
-import project.mobile.model.AuthState  // Añade esta línea
+import project.mobile.controller.ProductViewModel
+import project.mobile.model.AuthState
+import project.mobile.model.Product
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,7 +126,6 @@ fun AddProductScreen(
     var category by remember { mutableStateOf("") }
 
     val scrapingState by productViewModel.scrapingState.collectAsState()
-
 
     fun createProduct() {
         scope.launch {
@@ -173,10 +200,8 @@ fun AddProductScreen(
                 )
                 2 -> ImageSelectionScreen(
                     scrapingState = scrapingState,
-                    onImageSelected = {
-                        selectedImageUrl = it
-                        currentStep++
-                    }
+                    onImageSelected = { selectedImageUrl = it; currentStep++ },
+                    onCategoryExtracted = { category = it }
                 )
                 3 -> ProductDetailsScreen(
                     title = title,
@@ -319,7 +344,9 @@ fun AmazonLinkScreen(
             value = amazonUrl,
             onValueChange = onUrlChange,
             label = { Text("Amazon product URL") },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color(0xFF2A2A2A),
                 unfocusedContainerColor = Color(0xFF2A2A2A),
@@ -348,7 +375,8 @@ fun AmazonLinkScreen(
 @Composable
 fun ImageSelectionScreen(
     scrapingState: ProductViewModel.ScrapingState,
-    onImageSelected: (String) -> Unit
+    onImageSelected: (String) -> Unit,
+    onCategoryExtracted: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -365,6 +393,9 @@ fun ImageSelectionScreen(
 
         when (scrapingState) {
             is ProductViewModel.ScrapingState.Success -> {
+                LaunchedEffect(scrapingState.category) {
+                    onCategoryExtracted(scrapingState.category)
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -415,7 +446,7 @@ fun ProductDetailsScreen(
     onIsOnlineChange: (Boolean) -> Unit,
     onNext: () -> Unit
 ) {
-    Column(
+    Column( // Cambiado de LazyColumn a Column para igualar a tu compañero
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
@@ -742,7 +773,6 @@ fun DatePickerDialog(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        // Use SimpleDateFormat instead of LocalDate for better compatibility
                         val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                             .format(Date(millis))
                         onDateSelected(date)
@@ -764,7 +794,6 @@ fun DatePickerDialog(
             )
         }
     } else {
-        // Fallback for older Android versions
         val context = LocalContext.current
         val calendar = Calendar.getInstance()
 
@@ -783,4 +812,3 @@ fun DatePickerDialog(
         ).show()
     }
 }
-
