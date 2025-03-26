@@ -31,6 +31,7 @@ import project.mobile.controller.AuthManager
 import project.mobile.controller.ProductViewModel
 import project.mobile.model.Comment
 import project.mobile.model.Product
+import project.mobile.model.User
 import project.mobile.ui.theme.EverdealsRed
 import project.mobile.ui.theme.OrangeFF6200
 import java.text.SimpleDateFormat
@@ -42,13 +43,15 @@ fun ProductDetailScreen(
     productId: String,
     onNavigateBack: () -> Unit,
     productViewModel: ProductViewModel,
-    authManager: AuthManager
+    authManager: AuthManager,
+    onUserClick: () -> Unit
 ) {
     var commentText by remember { mutableStateOf("") }
     val context = LocalContext.current
     val product by productViewModel.getProductById(productId).collectAsState()
     val comments by productViewModel.getCommentsForProduct(productId).collectAsState(initial = emptyList())
     var currentUserId by remember { mutableStateOf<String?>(null) }
+    val currentUser = remember { mutableStateOf<User?>(null) }
 
     LaunchedEffect(Unit) {
         currentUserId = authManager.getCurrentUser()?.id
@@ -57,6 +60,8 @@ fun ProductDetailScreen(
     LaunchedEffect(productId) {
         productViewModel.loadProductDetails(productId)
         productViewModel.loadComments(productId)
+        productViewModel.recordProductClick(productId)
+        currentUser.value = productViewModel.getCurrentUser()
     }
 
     Scaffold(

@@ -21,6 +21,13 @@ import project.mobile.controller.ProductViewModel
 import project.mobile.navigation.Screen
 import project.mobile.navigation.TopNavigationBar
 import project.mobile.ui.theme.OrangeFF6200
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,15 +189,11 @@ fun MainScreenContent(
                             onUserClick = { userId ->
                                 try {
                                     Log.d("MainScreen", "Attempting to navigate to profile for userId: $userId")
-                                    val route = Screen.Profile.createRoute(userId, forcePublicView = true)
-                                    Log.d("MainScreen", "Generated route: $route")
-                                    navController.navigate(route) {
-                                        launchSingleTop = true
-                                    }
+                                    navController.navigate(Screen.Profile.route)
                                     Log.d("MainScreen", "Navigation executed successfully")
                                 } catch (e: Exception) {
                                     Log.e("MainScreen", "Navigation failed: ${e.message}", e)
-                                    navigationError = "Error al navegar al perfil" // Actualizar el estado
+                                    navigationError = "Error al navegar al perfil"
                                 }
                             }
                         )

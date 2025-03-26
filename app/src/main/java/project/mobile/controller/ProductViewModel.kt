@@ -24,6 +24,9 @@ import com.google.android.gms.tasks.Tasks
 import kotlinx.coroutines.tasks.await
 import java.util.*
 import kotlinx.coroutines.flow.*
+import project.mobile.model.AffiliateStats
+import project.mobile.model.Transaction
+import project.mobile.model.TransactionStatus
 
 class ProductViewModel(
     application: Application,
@@ -58,10 +61,26 @@ class ProductViewModel(
     private val _currentProduct = MutableStateFlow<Product?>(null)
     val currentProduct: StateFlow<Product?> = _currentProduct.asStateFlow()
 
+    private val _affiliateStats = MutableStateFlow<List<AffiliateStats>>(emptyList())
+    val affiliateStats: StateFlow<List<AffiliateStats>> = _affiliateStats.asStateFlow()
+
+    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
+    val transactions: StateFlow<List<Transaction>> = _transactions.asStateFlow()
+
+    private val _userBalance = MutableStateFlow(0.0)
+    val userBalance: StateFlow<Double> = _userBalance.asStateFlow()
+
+    private val _withdrawals = MutableStateFlow<List<Map<String, Any>>>(emptyList())
+    val withdrawals: StateFlow<List<Map<String, Any>>> = _withdrawals.asStateFlow()
+
     init {
         loadProducts()
         updateCategories()
         setupCommentsListener()
+        loadAffiliateStats()
+        loadTransactions()
+        loadWithdrawals()
+        loadUserBalance()
     }
 
     private fun setupCommentsListener() {
@@ -144,8 +163,8 @@ class ProductViewModel(
                 true
             } else {
                 product.name.contains(_searchQuery.value, ignoreCase = true) ||
-                        product.description.contains(_searchQuery.value, ignoreCase = true) ||
-                        product.category.contains(_searchQuery.value, ignoreCase = true)
+                product.description.contains(_searchQuery.value, ignoreCase = true) ||
+                product.category.contains(_searchQuery.value, ignoreCase = true)
             }
 
             val matchesCategory = if (_selectedCategory.value == null) {
@@ -156,6 +175,7 @@ class ProductViewModel(
 
             matchesSearch && matchesCategory
         }
+        Log.d("ProductViewModel", "Productos filtrados: ${filteredProducts.size}")
         _products.value = filteredProducts
     }
 
@@ -169,14 +189,12 @@ class ProductViewModel(
     fun loadProducts() {
         viewModelScope.launch {
             try {
-                Log.d("ProductViewModel", "Loading products...")
                 val loadedProducts = repository.getProducts()
-                Log.d("ProductViewModel", "Products loaded: ${loadedProducts.size}")
                 _allProducts.value = loadedProducts
                 updateCategories()
                 filterProducts()
             } catch (e: Exception) {
-                Log.e("ProductViewModel", "Error loading products", e)
+                _error.value = "Error al cargar productos: ${e.message}"
                 _products.value = emptyList()
             }
         }
@@ -188,13 +206,11 @@ class ProductViewModel(
                 val loadedProducts = repository.getProducts()
                 val sortedProducts = loadedProducts.sortedByDescending { it.likes - it.dislikes }
                 _allProducts.value = sortedProducts
-                if (_searchQuery.value.isNotEmpty()) {
-                    searchProducts(_searchQuery.value)
-                } else {
-                    _products.value = sortedProducts
-                }
+                Log.d("ProductViewModel", "Productos ordenados por votos: ${sortedProducts.size}")
+                filterProducts()
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error loading products by votes", e)
+                _error.value = "Error al cargar productos por votos: ${e.message}"
             }
         }
     }
@@ -208,13 +224,11 @@ class ProductViewModel(
                         .thenByDescending { it.createdAt }
                 )
                 _allProducts.value = sortedProducts
-                if (_searchQuery.value.isNotEmpty()) {
-                    searchProducts(_searchQuery.value)
-                } else {
-                    _products.value = sortedProducts
-                }
+                Log.d("ProductViewModel", "Productos ordenados por rising: ${sortedProducts.size}")
+                filterProducts()
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error loading rising products", e)
+                _error.value = "Error al cargar productos rising: ${e.message}"
             }
         }
     }
@@ -225,13 +239,11 @@ class ProductViewModel(
                 val loadedProducts = repository.getProducts()
                 val sortedProducts = loadedProducts.sortedByDescending { it.createdAt }
                 _allProducts.value = sortedProducts
-                if (_searchQuery.value.isNotEmpty()) {
-                    searchProducts(_searchQuery.value)
-                } else {
-                    _products.value = sortedProducts
-                }
+                Log.d("ProductViewModel", "Productos ordenados por fecha: ${sortedProducts.size}")
+                filterProducts()
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error loading products by date", e)
+                _error.value = "Error al cargar productos por fecha: ${e.message}"
             }
         }
     }
@@ -393,6 +405,137 @@ class ProductViewModel(
 
     fun getProductById(productId: String): StateFlow<Product?> {
         return _currentProduct.asStateFlow()
+    }
+
+    fun loadAffiliateStats() {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                Log.d("ProductViewModel", "Cargando estadísticas de afiliados para usuario: $userId")
+                val stats = repository.getAffiliateStatsForUser(userId)
+                _affiliateStats.value = stats
+                Log.d("ProductViewModel", "Estadísticas cargadas: ${stats.size} productos")
+                // Actualizar el balance después de cargar las estadísticas
+                loadUserBalance()
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error al cargar estadísticas de afiliados", e)
+                _error.value = "Error al cargar estadísticas: ${e.message}"
+            }
+        }
+    }
+
+    fun recordProductClick(productId: String) {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                Log.d("ProductViewModel", "Registrando click para producto: $productId")
+                repository.incrementProductClicks(productId, userId)
+                // Recargar estadísticas después de registrar el click
+                loadAffiliateStats()
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error al registrar click", e)
+                _error.value = "Error al registrar click: ${e.message}"
+            }
+        }
+    }
+
+    // Esta función será llamada desde el panel de administración
+    fun updateProductSales(productId: String, newSales: Int) {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                Log.d("ProductViewModel", "Actualizando ventas para producto: $productId")
+                repository.updateProductSales(productId, userId, newSales)
+                // Recargar estadísticas después de actualizar las ventas
+                loadAffiliateStats()
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error al actualizar ventas", e)
+                _error.value = "Error al actualizar ventas: ${e.message}"
+            }
+        }
+    }
+
+    fun recordProductSale(productId: String, saleAmount: Double) {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                repository.recordProductSale(productId, userId, saleAmount)
+                loadAffiliateStats()
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error recording sale", e)
+                _error.value = e.message ?: "Error recording sale"
+            }
+        }
+    }
+
+    fun loadTransactions() {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                val transactions = repository.getTransactions(userId)
+                _transactions.value = transactions
+                // Actualizar el balance después de cargar las transacciones
+                loadUserBalance()
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error loading transactions", e)
+                _error.value = "Error loading transactions: ${e.message}"
+            }
+        }
+    }
+
+    fun loadWithdrawals() {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                val withdrawalsList = repository.getWithdrawals(userId)
+                _withdrawals.value = withdrawalsList
+                loadUserBalance() // Actualizar el balance después de cargar los retiros
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error loading withdrawals", e)
+                _error.value = "Error loading withdrawals: ${e.message}"
+            }
+        }
+    }
+
+    fun loadUserBalance() {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                // Calcular el balance total sumando las ganancias de todos los productos
+                val totalEarnings = _affiliateStats.value.sumOf { it.earnings }
+                // Obtener el total de retiros completados
+                val completedWithdrawals = _withdrawals.value
+                    .filter { it["status"] == "COMPLETED" }
+                    .sumOf { it["amount"] as? Double ?: 0.0 }
+                // El balance disponible es el total menos los retiros completados
+                _userBalance.value = totalEarnings - completedWithdrawals
+                Log.d("ProductViewModel", "Balance actualizado: ${_userBalance.value}")
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error loading user balance", e)
+                _error.value = "Error loading balance: ${e.message}"
+            }
+        }
+    }
+
+    fun requestWithdrawal(amount: Double, paypalEmail: String) {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUser()?.id ?: return@launch
+                val result = repository.createWithdrawalRequest(userId, amount, paypalEmail)
+                
+                result.onSuccess {
+                    // Recargar todo después de un retiro exitoso
+                    loadWithdrawals()
+                    loadTransactions()
+                    loadUserBalance()
+                }.onFailure { e ->
+                    _error.value = e.message ?: "Error requesting withdrawal"
+                }
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error requesting withdrawal", e)
+                _error.value = "Error requesting withdrawal: ${e.message}"
+            }
+        }
     }
 
     sealed class ScrapingState {

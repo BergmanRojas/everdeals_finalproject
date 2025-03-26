@@ -22,7 +22,12 @@ data class Product(
     val dislikedBy: List<String> = emptyList(),
     val comments: List<String> = emptyList(),
     val link: String = "",
-    @PropertyName("isOnline") val online: Boolean = true,
+    @get:PropertyName("isOnline")
+    @set:PropertyName("isOnline")
+    var isOnline: Boolean = true,
     val startDate: String = "",
-    val endDate: String = ""
+    val endDate: String = "",
+    val title: String = "",
+    val price: Double = 0.0,
+    val url: String = ""
 )

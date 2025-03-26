@@ -109,7 +109,7 @@ fun ProfileTabs(
                                 navController.navigate(Screen.ProductDetail.createRoute(product.id))
                             },
                             onUserClick = { userId ->
-                                navController.navigate(Screen.Profile.createRoute(userId))
+                                navController.navigate(Screen.Profile.route)
                             }
                         )
                     }

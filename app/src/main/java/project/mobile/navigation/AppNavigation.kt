@@ -47,6 +47,7 @@ import project.mobile.view.RegisterScreen
 import project.mobile.view.SettingsScreen
 import project.mobile.view.screens.ForgotPasswordScreen
 import project.mobile.view.screens.SplashScreenContent
+import project.mobile.view.screens.AffiliateScreen
 
 @Composable
 fun AppNavigation() {
@@ -90,8 +91,7 @@ fun AppNavigation() {
                     onAddProductClick = { navController.navigate("add_product") },
                     onProfileClick = {
                         scope.launch {
-                            val userId = authManager.getCurrentUser()?.id ?: return@launch
-                            navController.navigate(Screen.Profile.createRoute(userId, forcePublicView = false)) // Perfil propio
+                            navController.navigate(Screen.Profile.route)
                         }
                     },
                     selectedItem = selectedItem,
@@ -167,13 +167,24 @@ fun AppNavigation() {
                     onAddProductClick = { navController.navigate("add_product") },
                     onProfileClick = {
                         scope.launch {
-                            val userId = authManager.getCurrentUser()?.id ?: return@launch
-                            navController.navigate(Screen.Profile.createRoute(userId, forcePublicView = false))
+                            navController.navigate(Screen.Profile.route)
                         }
                     },
                     productViewModel = productViewModel,
                     navController = navController
                 )
+            }
+
+            composable(Screen.Affiliate.route) {
+                val productViewModel: ProductViewModel = viewModel(
+                    factory = ProductViewModel.Factory(
+                        context.applicationContext as Application,
+                        productRepository,
+                        amazonScraper,
+                        authRepository
+                    )
+                )
+                AffiliateScreen(productViewModel = productViewModel)
             }
 
             composable("add_product") {
@@ -212,35 +223,26 @@ fun AppNavigation() {
                     productId = productId,
                     onNavigateBack = { navController.popBackStack() },
                     productViewModel = productViewModel,
-                    authManager = authManager
+                    authManager = authManager,
+                    onUserClick = {
+                        navController.navigate(Screen.Profile.route)
+                    }
                 )
             }
 
-            composable(
-                route = "profile/{userId}/{forcePublicView}",
-                arguments = listOf(
-                    navArgument("userId") { type = NavType.StringType },
-                    navArgument("forcePublicView") {
-                        type = NavType.BoolType
-                        defaultValue = false
-                    }
-                )
-            ) { backStackEntry ->
-                val userId = backStackEntry.arguments?.getString("userId") ?: ""
-                val forcePublicView = backStackEntry.arguments?.getBoolean("forcePublicView") ?: false
-                val currentUserId = currentUser?.id
-                val isOwnProfile = !forcePublicView && userId == currentUserId
+            composable(Screen.Profile.route) {
                 val profileViewModel: ProfileViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                            return ProfileViewModel(authManager).apply { loadProfileData(userId) } as T
+                            return ProfileViewModel(authManager) as T
                         }
                     }
                 )
                 ProfileScreen(
                     viewModel = profileViewModel,
                     authManager = authManager,
+                    onNavigateBack = { navController.popBackStack() },
                     onNavigateToSettings = { navController.navigate("settings") },
                     onSignOut = {
                         scope.launch {
@@ -252,11 +254,14 @@ fun AppNavigation() {
                             }
                         }
                     },
-                    onNavigateBack = { navController.popBackStack() },
-                    onShareClick = { /* Share logic */ },
+                    onShareClick = { /* Implementar lógica de compartir */ },
                     onAddProductClick = { navController.navigate("add_product") },
-                    onProfileClick = { navController.navigate(Screen.Profile.createRoute(userId, forcePublicView = false)) },
-                    isOwnProfile = isOwnProfile,
+                    onProfileClick = {
+                        scope.launch {
+                            navController.navigate(Screen.Profile.route)
+                        }
+                    },
+                    isOwnProfile = true,
                     navController = navController
                 )
             }

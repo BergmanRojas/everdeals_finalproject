@@ -142,12 +142,14 @@ fun ProfileScreen(
                             items(deals) { product ->
                                 DealCard(
                                     product = product,
-                                    onLikeDislike = viewModel::toggleLikeDislike,
+                                    onLikeDislike = { productId, isLike ->
+                                        viewModel.toggleLikeDislike(productId, isLike)
+                                    },
                                     onClick = {
                                         navController.navigate(Screen.ProductDetail.createRoute(product.id))
                                     },
                                     onUserClick = { userId ->
-                                        navController.navigate(Screen.Profile.createRoute(userId))
+                                        navController.navigate(Screen.Profile.route)
                                     }
                                 )
                             }

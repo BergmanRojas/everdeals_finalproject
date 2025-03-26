@@ -25,8 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import project.mobile.R
 import project.mobile.ui.theme.BottomNavBackground
 import project.mobile.ui.theme.Dark161C2A
 import project.mobile.ui.theme.OrangeFF6200
@@ -180,14 +182,17 @@ fun BottomNavigationBar(
             )
         )
         NavigationBarItem(
-            selected = selectedItem == "Inbox",
+            selected = selectedItem == "Affiliate",
             onClick = {
-                onItemSelected("Inbox")
-                // TODO: Añadir navegación si "Inbox" tiene una ruta específica
+                onItemSelected("Affiliate")
+                navController.navigate(Screen.Affiliate.route) {
+                    popUpTo(Screen.Main.route) { inclusive = false }
+                    launchSingleTop = true
+                }
             },
             icon = {
                 Box(
-                    modifier = if (selectedItem == "Inbox") Modifier
+                    modifier = if (selectedItem == "Affiliate") Modifier
                         .background(
                             color = OrangeFF6200.copy(alpha = 0.7f),
                             shape = RoundedCornerShape(8.dp)
@@ -197,18 +202,18 @@ fun BottomNavigationBar(
                         .padding(6.dp)
                 ) {
                     Icon(
-                        Icons.Default.Mail,
-                        contentDescription = "Inbox",
+                        painter = painterResource(id = R.drawable.ic_affiliate),
+                        contentDescription = "Affiliate",
                         modifier = Modifier.size(34.dp),
-                        tint = if (selectedItem == "Inbox") Color.White else MaterialTheme.colorScheme.onBackground
+                        tint = if (selectedItem == "Affiliate") Color.White else MaterialTheme.colorScheme.onBackground
                     )
                 }
             },
             label = {
                 Text(
-                    text = "Inbox",
+                    text = "Affiliate",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (selectedItem == "Inbox") OrangeFF6200 else MaterialTheme.colorScheme.onBackground
+                    color = if (selectedItem == "Affiliate") OrangeFF6200 else MaterialTheme.colorScheme.onBackground
                 )
             },
             colors = NavigationBarItemDefaults.colors(
