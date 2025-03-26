@@ -5,10 +5,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
+import android.util.Log
 
 class ProductRepository(private val authRepository: AuthRepository) {
     private val firestore = FirebaseFirestore.getInstance()
     private val productsCollection = firestore.collection("products")
+    private val commentsCollection = firestore.collection("comments")
 
     suspend fun getProducts(): List<Product> {
         return try {
@@ -120,6 +122,41 @@ class ProductRepository(private val authRepository: AuthRepository) {
             snapshot.toObjects(Product::class.java)
         } catch (e: Exception) {
             emptyList()
+        }
+    }
+
+    suspend fun getProductById(productId: String): Product? {
+        return try {
+            val snapshot = productsCollection.document(productId).get().await()
+            snapshot.toObject(Product::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getCommentsForProduct(productId: String): List<Comment> {
+        return try {
+            val snapshot = commentsCollection
+                .whereEqualTo("productId", productId)
+                .get()
+                .await()
+            
+            val comments = snapshot.toObjects(Comment::class.java)
+            comments.sortedByDescending { it.createdAt }
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error getting comments for product $productId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    suspend fun addComment(comment: Comment): Result<Unit> {
+        return try {
+            Log.d("ProductRepository", "Adding comment: $comment")
+            commentsCollection.document(comment.id).set(comment).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error adding comment: ${e.message}")
+            Result.failure(e)
         }
     }
 }

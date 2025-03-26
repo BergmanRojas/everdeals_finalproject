@@ -194,6 +194,29 @@ fun AppNavigation() {
             }
 
             composable(
+                route = Screen.ProductDetail.route,
+                arguments = listOf(
+                    navArgument("productId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val productId = backStackEntry.arguments?.getString("productId") ?: ""
+                val productViewModel: ProductViewModel = viewModel(
+                    factory = ProductViewModel.Factory(
+                        context.applicationContext as Application,
+                        productRepository,
+                        amazonScraper,
+                        authRepository
+                    )
+                )
+                ProductDetailScreen(
+                    productId = productId,
+                    onNavigateBack = { navController.popBackStack() },
+                    productViewModel = productViewModel,
+                    authManager = authManager
+                )
+            }
+
+            composable(
                 route = "profile/{userId}/{forcePublicView}",
                 arguments = listOf(
                     navArgument("userId") { type = NavType.StringType },

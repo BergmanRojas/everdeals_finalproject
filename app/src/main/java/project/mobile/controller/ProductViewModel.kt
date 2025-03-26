@@ -55,6 +55,9 @@ class ProductViewModel(
     private val _comments = MutableStateFlow<Map<String, List<Comment>>>(emptyMap())
     val comments: StateFlow<Map<String, List<Comment>>> = _comments.asStateFlow()
 
+    private val _currentProduct = MutableStateFlow<Product?>(null)
+    val currentProduct: StateFlow<Product?> = _currentProduct.asStateFlow()
+
     init {
         loadProducts()
         updateCategories()
@@ -278,114 +281,118 @@ class ProductViewModel(
         viewModelScope.launch {
             try {
                 val currentUser = authRepository.getCurrentUser()
-                if (currentUser != null) {
-                    repository.toggleLikeDislike(productId, currentUser.id, isLike)
-                    loadProducts()
+                if (currentUser == null) {
+                    _error.value = "Debes iniciar sesión para votar"
+                    return@launch
                 }
+
+                repository.toggleLikeDislike(productId, currentUser.id, isLike)
+                loadProductDetails(productId)
             } catch (e: Exception) {
                 Log.e("ProductViewModel", "Error toggling like/dislike", e)
+                _error.value = "Error al votar"
             }
         }
     }
 
-    fun getCommentsForProduct(productId: String): StateFlow<List<Comment>> = _comments
-        .map { it[productId] ?: emptyList() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    fun getCommentsForProduct(productId: String): StateFlow<List<Comment>> {
+        return comments
+            .map { it[productId] ?: emptyList() }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = emptyList()
+            )
+    }
 
     fun addComment(productId: String, text: String) {
         viewModelScope.launch {
             try {
-                val firebaseUser = FirebaseAuth.getInstance().currentUser
-                if (firebaseUser == null) {
-                    Log.e("ProductViewModel", "Usuario no autenticado")
-                    _error.value = "Usuario no autenticado"
+                val currentUser = authRepository.getCurrentUser()
+                if (currentUser == null) {
+                    _error.value = "Debes iniciar sesión para comentar"
                     return@launch
                 }
 
                 val comment = Comment(
                     id = UUID.randomUUID().toString(),
                     productId = productId,
-                    userId = firebaseUser.uid,
-                    userName = firebaseUser.displayName ?: "Anonymous",
-                    userPhotoUrl = firebaseUser.photoUrl?.toString() ?: "",
+                    userId = currentUser.id,
+                    userName = currentUser.name,
+                    userPhotoUrl = currentUser.photoUrl ?: "",
                     text = text,
                     createdAt = Timestamp.now()
                 )
 
-                try {
-                    val db = FirebaseFirestore.getInstance()
-                    db.collection("comments")
-                        .document(comment.id)
-                        .set(comment)
-                        .await()
-
-                    val currentComments = _comments.value.toMutableMap()
-                    val productComments = currentComments[productId]?.toMutableList() ?: mutableListOf()
-                    productComments.add(0, comment)
-                    currentComments[productId] = productComments
-                    _comments.value = currentComments
-                } catch (e: Exception) {
-                    Log.e("ProductViewModel", "Error al guardar el comentario: ${e.message}", e)
-                    _error.value = "Error al guardar el comentario: ${e.message}"
-                }
+                repository.addComment(comment)
+                loadComments(productId)
             } catch (e: Exception) {
-                Log.e("ProductViewModel", "Error de autenticación: ${e.message}", e)
-                _error.value = "Error de autenticación: ${e.message}"
+                Log.e("ProductViewModel", "Error adding comment", e)
+                _error.value = "Error al agregar el comentario"
             }
         }
     }
 
-    fun addReply(productId: String, parentCommentId: String, text: String) {
+    fun replyToComment(productId: String, commentId: String, text: String) {
         viewModelScope.launch {
             try {
-                val firebaseUser = FirebaseAuth.getInstance().currentUser
-                if (firebaseUser == null) {
-                    Log.e("ProductViewModel", "Usuario no autenticado")
-                    _error.value = "Usuario no autenticado"
+                val currentUser = authRepository.getCurrentUser()
+                if (currentUser == null) {
+                    _error.value = "Debes iniciar sesión para responder"
                     return@launch
                 }
 
                 val reply = Comment(
                     id = UUID.randomUUID().toString(),
                     productId = productId,
-                    userId = firebaseUser.uid,
-                    userName = firebaseUser.displayName ?: "Anonymous",
-                    userPhotoUrl = firebaseUser.photoUrl?.toString() ?: "",
+                    userId = currentUser.id,
+                    userName = currentUser.name,
+                    userPhotoUrl = currentUser.photoUrl ?: "",
                     text = text,
                     createdAt = Timestamp.now(),
-                    parentId = parentCommentId,
+                    parentId = commentId,
                     isReply = true
                 )
 
-                try {
-                    val db = FirebaseFirestore.getInstance()
-                    db.collection("comments")
-                        .document(reply.id)
-                        .set(reply)
-                        .await()
-
-                    val currentComments = _comments.value.toMutableMap()
-                    val productComments = currentComments[productId]?.toMutableList() ?: mutableListOf()
-                    productComments.add(0, reply)
-                    currentComments[productId] = productComments
-                    _comments.value = currentComments
-                } catch (e: Exception) {
-                    Log.e("ProductViewModel", "Error al guardar la respuesta: ${e.message}", e)
-                    _error.value = "Error al guardar la respuesta: ${e.message}"
-                }
+                repository.addComment(reply)
+                loadComments(productId)
             } catch (e: Exception) {
-                Log.e("ProductViewModel", "Error de autenticación: ${e.message}", e)
-                _error.value = "Error de autenticación: ${e.message}"
+                Log.e("ProductViewModel", "Error replying to comment", e)
+                _error.value = "Error al responder al comentario"
             }
         }
     }
 
-    fun getRepliesForComment(productId: String, commentId: String): List<Comment> {
-        return _comments.value[productId]?.filter { it.parentId == commentId && it.isReply } ?: emptyList()
+    fun loadProductDetails(productId: String) {
+        viewModelScope.launch {
+            try {
+                val product = repository.getProductById(productId)
+                _currentProduct.value = product
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error loading product details", e)
+                _currentProduct.value = null
+            }
+        }
     }
 
-    fun getProductById(productId: String): Product? {
-        return _allProducts.value.find { it.id == productId }
+    fun loadComments(productId: String) {
+        viewModelScope.launch {
+            try {
+                Log.d("ProductViewModel", "Loading comments for product: $productId")
+                val productComments = repository.getCommentsForProduct(productId)
+                Log.d("ProductViewModel", "Loaded ${productComments.size} comments")
+                val currentComments = _comments.value.toMutableMap()
+                currentComments[productId] = productComments
+                _comments.value = currentComments
+            } catch (e: Exception) {
+                Log.e("ProductViewModel", "Error loading comments", e)
+                _error.value = "Error loading comments: ${e.message}"
+            }
+        }
+    }
+
+    fun getProductById(productId: String): StateFlow<Product?> {
+        return _currentProduct.asStateFlow()
     }
 
     sealed class ScrapingState {
@@ -410,3 +417,4 @@ class ProductViewModel(
         }
     }
 }
+
