@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import kotlinx.coroutines.launch
+import project.mobile.controller.AuthManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +36,9 @@ fun MainScreenContent(
     onAddProductClick: () -> Unit,
     onProfileClick: () -> Unit,
     productViewModel: ProductViewModel,
-    navController: NavController
-) {
+    navController: NavController,
+    authManager: AuthManager
+){
     val products by productViewModel.products.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
     var isLoading by remember { mutableStateOf(true) }
@@ -189,7 +191,7 @@ fun MainScreenContent(
                             onUserClick = { userId ->
                                 try {
                                     Log.d("MainScreen", "Attempting to navigate to profile for userId: $userId")
-                                    navController.navigate(Screen.Profile.route)
+                                    navController.navigate(Screen.Profile.createRoute(userId, false)) // Corrección aquí
                                     Log.d("MainScreen", "Navigation executed successfully")
                                 } catch (e: Exception) {
                                     Log.e("MainScreen", "Navigation failed: ${e.message}", e)

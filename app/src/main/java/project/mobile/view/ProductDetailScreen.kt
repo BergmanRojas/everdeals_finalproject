@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import project.mobile.R
@@ -44,7 +45,8 @@ fun ProductDetailScreen(
     onNavigateBack: () -> Unit,
     productViewModel: ProductViewModel,
     authManager: AuthManager,
-    onUserClick: () -> Unit
+    onUserClick: () -> Unit,
+    navController: NavController,
 ) {
     var commentText by remember { mutableStateOf("") }
     val context = LocalContext.current

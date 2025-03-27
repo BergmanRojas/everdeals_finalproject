@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import project.mobile.components.ActivityCard
 import project.mobile.components.DealCard
+import project.mobile.controller.ProfileViewModel
+import project.mobile.model.ForumTopic
 import project.mobile.model.Product
 import project.mobile.model.UserActivity
 import project.mobile.navigation.Screen
@@ -21,12 +23,13 @@ import project.mobile.navigation.Screen
 fun ProfileTabs(
     activities: List<UserActivity>,
     deals: List<Product>,
-    forumTopics: List<String>,
+    forumTopics: List<ForumTopic>,
     stats: List<String>,
     onLikeDislike: (String, Boolean) -> Unit,
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
-    navController: NavController
+    navController: NavController,
+    viewModel: ProfileViewModel // Nuevo parámetro
 ) {
     val tabs = listOf("Activities", "Deals", "Forum", "Statistics")
 
@@ -104,13 +107,9 @@ fun ProfileTabs(
                     items(deals) { product ->
                         DealCard(
                             product = product,
-                            onLikeDislike = onLikeDislike,
-                            onClick = {
-                                navController.navigate(Screen.ProductDetail.createRoute(product.id))
-                            },
-                            onUserClick = { userId ->
-                                navController.navigate(Screen.Profile.route)
-                            }
+                            onLikeDislike = viewModel::toggleLikeDislike,
+                            onClick = { navController.navigate(Screen.ProductDetail.createRoute(product.id)) },
+                            onUserClick = { userId -> navController.navigate(Screen.Profile.createRoute(userId, isOwnProfile = false)) }
                         )
                     }
                 }
@@ -153,10 +152,15 @@ fun ProfileTabs(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = topic,
+                                    text = topic.title,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Posts: ${topic.postCount}",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp
                                 )
                             }
                         }

@@ -25,7 +25,8 @@ class AuthManager(
         coroutineScope.launch {
             userPreferences.isLoggedIn.collect { isLoggedIn ->
                 if (isLoggedIn) {
-                    _authState.value = AuthState.Success
+                    val sessionValid = checkSession()
+                    _authState.value = if (sessionValid) AuthState.Success else AuthState.Idle
                 } else {
                     _authState.value = AuthState.Idle
                 }
@@ -39,18 +40,21 @@ class AuthManager(
             if (isLoggedIn) {
                 val user = getCurrentUser()
                 if (user != null) {
+                    Log.d("AuthManager", "Session valid, user: $user")
                     _authState.value = AuthState.Success
                     true
                 } else {
+                    Log.w("AuthManager", "Session refreshed but no user found")
                     _authState.value = AuthState.Idle
                     false
                 }
             } else {
+                Log.w("AuthManager", "Session refresh failed")
                 _authState.value = AuthState.Idle
                 false
             }
         } catch (e: Exception) {
-            Log.e("AuthManager", "Error checking session", e)
+            Log.e("AuthManager", "Error checking session: ${e.message}", e)
             _authState.value = AuthState.Error(e.message ?: "Failed to check session")
             false
         }
@@ -64,10 +68,10 @@ class AuthManager(
                 userPreferences.setLoggedIn(true)
                 _authState.value = AuthState.Success
             } else {
-                _authState.value =
-                    AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
+                _authState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
             }
         } catch (e: Exception) {
+            Log.e("AuthManager", "Sign in error: ${e.message}", e)
             _authState.value = AuthState.Error(e.message ?: "Unknown error")
         }
     }
@@ -80,10 +84,10 @@ class AuthManager(
                 userPreferences.setLoggedIn(true)
                 _authState.value = AuthState.Success
             } else {
-                _authState.value =
-                    AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
+                _authState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
             }
         } catch (e: Exception) {
+            Log.e("AuthManager", "Sign up error: ${e.message}", e)
             _authState.value = AuthState.Error(e.message ?: "Unknown error")
         }
     }
@@ -92,6 +96,7 @@ class AuthManager(
         repository.signOut()
         userPreferences.setLoggedIn(false)
         _authState.value = AuthState.Idle
+        Log.d("AuthManager", "User signed out")
     }
 
     suspend fun getCurrentUser(): User? {
@@ -99,10 +104,10 @@ class AuthManager(
             Log.d("AuthManager", "Attempting to get current user")
             val user = repository.getCurrentUser()
             if (user == null) {
-                Log.e("AuthManager", "No current user found in repository")
+                Log.w("AuthManager", "No current user found in repository")
                 _authState.value = AuthState.Idle
             } else {
-                Log.d("AuthManager", "Current user found: $user")
+                Log.d("AuthManager", "Current user retrieved: $user")
             }
             user
         } catch (e: Exception) {

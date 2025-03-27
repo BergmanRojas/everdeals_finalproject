@@ -5,16 +5,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Source
+import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import project.mobile.model.Message
-import project.mobile.model.Product
-import project.mobile.model.User
-import project.mobile.model.UserActivity
+import kotlinx.coroutines.withTimeoutOrNull
+import project.mobile.model.*
 import project.mobile.utils.getCurrentUserId
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class ProfileViewModel(
     private val authManager: AuthManager
@@ -33,13 +36,13 @@ class ProfileViewModel(
     private val _deals = MutableStateFlow<List<Product>>(emptyList())
     val deals: StateFlow<List<Product>> = _deals
 
-    private val _forumTopics = MutableStateFlow<List<String>>(emptyList())
-    val forumTopics: StateFlow<List<String>> = _forumTopics
+    private val _forumTopics = MutableStateFlow<List<ForumTopic>>(emptyList())
+    val forumTopics: StateFlow<List<ForumTopic>> = _forumTopics
 
     private val _stats = MutableStateFlow<List<String>>(emptyList())
     val stats: StateFlow<List<String>> = _stats
 
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading = MutableStateFlow(false) // Cambiado a false inicialmente
     val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _fetchError = MutableStateFlow<String?>(null)
@@ -48,146 +51,261 @@ class ProfileViewModel(
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages
 
-    // Nuevos estados para followers y following con nombres
-    private val _followersWithNames = MutableStateFlow<List<Pair<String, String>>>(emptyList()) // (id, name)
+    private val _conversations = MutableStateFlow<List<Conversation>>(emptyList())
+    val conversations: StateFlow<List<Conversation>> = _conversations
+
+    private val _unreadMessagesCount = MutableStateFlow(0)
+    val unreadMessagesCount: StateFlow<Int> = _unreadMessagesCount
+
+    private val _followersWithNames = MutableStateFlow<List<Pair<String, String>>>(emptyList())
     val followersWithNames: StateFlow<List<Pair<String, String>>> = _followersWithNames
 
-    private val _followingWithNames = MutableStateFlow<List<Pair<String, String>>>(emptyList()) // (id, name)
+    private val _followingWithNames = MutableStateFlow<List<Pair<String, String>>>(emptyList())
     val followingWithNames: StateFlow<List<Pair<String, String>>> = _followingWithNames
-
-    init {
-        loadUser()
-    }
-
-    private fun loadUser() {
-        viewModelScope.launch {
-            val user = authManager.getCurrentUser()
-            if (user != null) {
-                _userState.value = user
-                loadProfileData(user.id)
-            } else {
-                Log.e("ProfileViewModel", "No user found")
-                _fetchError.value = "User not authenticated"
-                _isLoading.value = false
-            }
-        }
-    }
 
     fun loadProfileData(userId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _fetchError.value = null
+            Log.d("ProfileViewModel", "Starting to load profile data for userId: $userId")
 
-            try {
-                Log.d("ProfileViewModel", "Loading profile data for userId: $userId")
+            val result = withTimeoutOrNull(10000L) {
+                try {
+                    Log.d("ProfileViewModel", "Fetching user from server for userId: $userId")
+                    val userSnapshot = try {
+                        firestore.collection("users").document(userId).get(Source.SERVER).await()
+                    } catch (e: FirebaseFirestoreException) {
+                        if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                            Log.w("ProfileViewModel", "Permission denied for userId: $userId")
+                            _fetchError.value = "Permission denied to access profile"
+                            return@withTimeoutOrNull
+                        } else if (e.message?.contains("offline") == true) {
+                            Log.w("ProfileViewModel", "Client offline, attempting cache for userId: $userId")
+                            firestore.collection("users").document(userId).get(Source.CACHE).await()
+                        } else {
+                            throw e
+                        }
+                    }
 
-                // Cargar datos del usuario desde Firestore
-                val userSnapshot = firestore.collection("users").document(userId).get().await()
-                val user = userSnapshot.toObject(User::class.java)?.copy(id = userId)
-                _userState.value = user
+                    if (!userSnapshot.exists()) {
+                        Log.w("ProfileViewModel", "User document does not exist for userId: $userId")
+                        _fetchError.value = "Profile not found"
+                        return@withTimeoutOrNull
+                    }
 
-                // Activities
-                val activitySnapshot = firestore.collection("user_interactions")
-                    .whereEqualTo("userId", userId)
-                    .get()
-                    .await()
-                val comments = activitySnapshot.documents
-                    .filter { it.getString("type") == "comment" }
-                    .map { doc ->
+                    val user = userSnapshot.toObject<User>()?.copy(id = userId)
+                    _userState.value = user
+
+                    if (user == null) {
+                        Log.w("ProfileViewModel", "Failed to deserialize user for userId: $userId")
+                        _fetchError.value = "Profile data invalid"
+                        return@withTimeoutOrNull
+                    }
+
+                    Log.d("ProfileViewModel", "User loaded: ${user.name} (${user.id})")
+
+                    // Cargar actividades
+                    val activitySnapshot = try {
+                        Log.d("ProfileViewModel", "Fetching activities from server for userId: $userId")
+                        firestore.collection("user_interactions")
+                            .whereEqualTo("userId", userId)
+                            .get(Source.SERVER)
+                            .await()
+                    } catch (e: FirebaseFirestoreException) {
+                        if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                            Log.w("ProfileViewModel", "Permission denied for activities of userId: $userId")
+                            _fetchError.value = "Permission denied to access activities"
+                            return@withTimeoutOrNull
+                        } else if (e.message?.contains("offline") == true) {
+                            Log.w("ProfileViewModel", "Offline, loading activities from cache for userId: $userId")
+                            firestore.collection("user_interactions")
+                                .whereEqualTo("userId", userId)
+                                .get(Source.CACHE)
+                                .await()
+                        } else {
+                            throw e
+                        }
+                    }
+
+                    val comments = activitySnapshot.documents
+                        .filter { it.getString("type") == "comment" }
+                        .map { doc ->
+                            UserActivity(
+                                type = "comment",
+                                content = doc.getString("comment") ?: "No comment",
+                                timestamp = doc.getTimestamp("createdAt"),
+                                userId = doc.getString("userId") ?: ""
+                            )
+                        }
+
+                    // Cargar productos (deals)
+                    val productSnapshot = try {
+                        Log.d("ProfileViewModel", "Fetching products from server for userId: $userId")
+                        firestore.collection("products")
+                            .whereEqualTo("userId", userId)
+                            .get(Source.SERVER)
+                            .await()
+                    } catch (e: FirebaseFirestoreException) {
+                        if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                            Log.w("ProfileViewModel", "Permission denied for products of userId: $userId")
+                            _fetchError.value = "Permission denied to access products"
+                            return@withTimeoutOrNull
+                        } else if (e.message?.contains("offline") == true) {
+                            Log.w("ProfileViewModel", "Offline, loading products from cache for userId: $userId")
+                            firestore.collection("products")
+                                .whereEqualTo("userId", userId)
+                                .get(Source.CACHE)
+                                .await()
+                        } else {
+                            throw e
+                        }
+                    }
+
+                    val sharedProducts = productSnapshot.documents.map { doc ->
                         UserActivity(
-                            type = "comment",
-                            content = doc.getString("comment") ?: "No comment",
-                            timestamp = doc.getTimestamp("createdAt")
+                            type = "product_shared",
+                            content = "Shared product: ${doc.getString("name") ?: "No name"}",
+                            timestamp = doc.getTimestamp("createdAt"),
+                            userId = doc.getString("userId") ?: ""
                         )
                     }
 
-                val productSnapshot = firestore.collection("products")
-                    .whereEqualTo("userId", userId)
-                    .get()
-                    .await()
-                val sharedProducts = productSnapshot.documents.map { doc ->
-                    UserActivity(
-                        type = "product_shared",
-                        content = "Shared product: ${doc.getString("name") ?: "No name"}",
-                        timestamp = doc.getTimestamp("createdAt")
-                    )
-                }
-                val likesDislikes = activitySnapshot.documents
-                    .filter { it.getString("type") in listOf("like", "dislike") }
-                    .map { doc ->
-                        UserActivity(
-                            type = doc.getString("type") ?: "unknown",
-                            content = "${doc.getString("type")?.capitalize()} on product: ${doc.getString("productName") ?: "Unknown"}",
-                            timestamp = doc.getTimestamp("createdAt")
+                    val likesDislikes = activitySnapshot.documents
+                        .filter { it.getString("type") in listOf("like", "dislike") }
+                        .map { doc ->
+                            UserActivity(
+                                type = doc.getString("type") ?: "unknown",
+                                content = "${doc.getString("type")?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } ?: "Unknown"} on product: ${doc.getString("productName") ?: "Unknown"}",
+                                timestamp = doc.getTimestamp("createdAt"),
+                                userId = doc.getString("userId") ?: ""
+                            )
+                        }
+
+                    _activities.value = (comments + sharedProducts + likesDislikes)
+                        .sortedByDescending { it.timestamp?.toDate()?.time }
+
+                    // Deals
+                    _deals.value = productSnapshot.documents.map { doc ->
+                        Product(
+                            id = doc.getString("id") ?: "",
+                            name = doc.getString("name") ?: "No name",
+                            description = doc.getString("description") ?: "",
+                            currentPrice = doc.getDouble("currentPrice") ?: 0.0,
+                            originalPrice = doc.getDouble("originalPrice") ?: 0.0,
+                            imageUrl = doc.getString("imageUrl") ?: "",
+                            amazonUrl = doc.getString("amazonUrl") ?: "",
+                            category = doc.getString("category") ?: "",
+                            startDate = doc.getString("startDate") ?: "",
+                            endDate = doc.getString("endDate") ?: "",
+                            userId = doc.getString("userId") ?: "",
+                            userName = doc.getString("userName") ?: "",
+                            likes = (doc.getLong("likes") ?: 0L).toInt(),
+                            dislikes = (doc.getLong("dislikes") ?: 0L).toInt(),
+                            likedBy = doc.get("likedBy") as? List<String> ?: emptyList(),
+                            dislikedBy = doc.get("dislikedBy") as? List<String> ?: emptyList(),
+                            createdAt = doc.getTimestamp("createdAt") ?: Timestamp.now()
                         )
                     }
-                _activities.value = (comments + sharedProducts + likesDislikes)
-                    .sortedByDescending { it.timestamp?.toDate()?.time }
 
-                // Deals
-                _deals.value = productSnapshot.documents.map { doc ->
-                    Product(
-                        id = doc.getString("id") ?: "",
-                        name = doc.getString("name") ?: "No name",
-                        description = doc.getString("description") ?: "",
-                        currentPrice = doc.getDouble("currentPrice") ?: 0.0,
-                        originalPrice = doc.getDouble("originalPrice") ?: 0.0,
-                        imageUrl = doc.getString("imageUrl") ?: "",
-                        amazonUrl = doc.getString("amazonUrl") ?: "",
-                        category = doc.getString("category") ?: "",
-                        startDate = doc.getString("startDate") ?: "",
-                        endDate = doc.getString("endDate") ?: "",
-                        userId = doc.getString("userId") ?: "",
-                        userName = doc.getString("userName") ?: "",
-                        likes = (doc.getLong("likes") ?: 0L).toInt(),
-                        dislikes = (doc.getLong("dislikes") ?: 0L).toInt(),
-                        likedBy = doc.get("likedBy") as? List<String> ?: emptyList(),
-                        dislikedBy = doc.get("dislikedBy") as? List<String> ?: emptyList(),
-                        createdAt = doc.getTimestamp("createdAt") ?: Timestamp.now()
+                    // Forum topics
+                    val forumSnapshot = try {
+                        Log.d("ProfileViewModel", "Fetching forum topics from server for userId: $userId")
+                        firestore.collection("forum_topics")
+                            .whereEqualTo("userId", userId)
+                            .get(Source.SERVER)
+                            .await()
+                    } catch (e: FirebaseFirestoreException) {
+                        if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                            Log.w("ProfileViewModel", "Permission denied for forum topics of userId: $userId")
+                            _fetchError.value = "Permission denied to access forum topics"
+                            return@withTimeoutOrNull
+                        } else if (e.message?.contains("offline") == true) {
+                            Log.w("ProfileViewModel", "Offline, loading forum topics from cache for userId: $userId")
+                            firestore.collection("forum_topics")
+                                .whereEqualTo("userId", userId)
+                                .get(Source.CACHE)
+                                .await()
+                        } else {
+                            throw e
+                        }
+                    }
+                    _forumTopics.value = forumSnapshot.documents.mapNotNull { doc -> doc.toObject<ForumTopic>() }
+
+                    // Statistics
+                    val totalProducts = _deals.value.size
+                    val totalLikesReceived = _deals.value.sumOf { it.likes }
+                    val totalComments = comments.size
+                    _stats.value = listOf(
+                        "Products shared: $totalProducts",
+                        "Likes received: $totalLikesReceived",
+                        "Comments made: $totalComments"
                     )
+
+                    // Cargar nombres de followers y following
+                    val followersIds: List<String> = user.followers
+                    val followingIds: List<String> = user.following
+
+                    val followersList = mutableListOf<Pair<String, String>>()
+                    for (id in followersIds) {
+                        try {
+                            val followerSnapshot = firestore.collection("users").document(id).get(Source.SERVER).await()
+                            val follower = followerSnapshot.toObject<User>()
+                            followersList.add(Pair(id, follower?.name ?: follower?.username ?: "Unknown"))
+                            Log.d("ProfileViewModel", "Loaded follower from server: ${follower?.name} ($id)")
+                        } catch (e: FirebaseFirestoreException) {
+                            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                                Log.w("ProfileViewModel", "Permission denied for follower $id")
+                                followersList.add(Pair(id, "Unknown (access denied)"))
+                            } else if (e.message?.contains("offline") == true) {
+                                val cachedSnapshot = firestore.collection("users").document(id).get(Source.CACHE).await()
+                                val follower = cachedSnapshot.toObject<User>()
+                                followersList.add(Pair(id, follower?.name ?: follower?.username ?: "Unknown (cached)"))
+                                Log.d("ProfileViewModel", "Loaded follower from cache: ${follower?.name} ($id)")
+                            } else {
+                                Log.w("ProfileViewModel", "Error loading follower $id: ${e.message}")
+                                followersList.add(Pair(id, "Unknown (error)"))
+                            }
+                        }
+                    }
+                    _followersWithNames.value = followersList
+
+                    val followingList = mutableListOf<Pair<String, String>>()
+                    for (id in followingIds) {
+                        try {
+                            val followingSnapshot = firestore.collection("users").document(id).get(Source.SERVER).await()
+                            val following = followingSnapshot.toObject<User>()
+                            followingList.add(Pair(id, following?.name ?: following?.username ?: "Unknown"))
+                            Log.d("ProfileViewModel", "Loaded following from server: ${following?.name} ($id)")
+                        } catch (e: FirebaseFirestoreException) {
+                            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                                Log.w("ProfileViewModel", "Permission denied for following $id")
+                                followingList.add(Pair(id, "Unknown (access denied)"))
+                            } else if (e.message?.contains("offline") == true) {
+                                val cachedSnapshot = firestore.collection("users").document(id).get(Source.CACHE).await()
+                                val following = cachedSnapshot.toObject<User>()
+                                followingList.add(Pair(id, following?.name ?: following?.username ?: "Unknown (cached)"))
+                                Log.d("ProfileViewModel", "Loaded following from cache: ${following?.name} ($id)")
+                            } else {
+                                Log.w("ProfileViewModel", "Error loading following $id: ${e.message}")
+                                followingList.add(Pair(id, "Unknown (error)"))
+                            }
+                        }
+                    }
+                    _followingWithNames.value = followingList
+
+                } catch (e: Exception) {
+                    Log.e("ProfileViewModel", "Error fetching profile data: ${e.message}", e)
+                    _fetchError.value = "Error loading profile: ${e.message}"
                 }
-
-                // Forum topics
-                val forumSnapshot = firestore.collection("forum_topics")
-                    .whereEqualTo("userId", userId)
-                    .get()
-                    .await()
-                _forumTopics.value = forumSnapshot.documents.map { it.getString("title") ?: "No title" }
-
-                // Statistics
-                val totalProducts = _deals.value.size
-                val totalLikesReceived = _deals.value.sumOf { it.likes }
-                val totalComments = comments.size
-                _stats.value = listOf(
-                    "Products shared: $totalProducts",
-                    "Likes received: $totalLikesReceived",
-                    "Comments made: $totalComments"
-                )
-
-                // Cargar nombres de followers y following
-                val followersIds = user?.followers ?: emptyList()
-                val followingIds = user?.following ?: emptyList()
-
-                val followersList = followersIds.map { id ->
-                    val followerSnapshot = firestore.collection("users").document(id).get().await()
-                    val follower = followerSnapshot.toObject(User::class.java)
-                    Pair(id, follower?.name ?: follower?.username ?: "Unknown")
-                }
-                _followersWithNames.value = followersList
-
-                val followingList = followingIds.map { id ->
-                    val followingSnapshot = firestore.collection("users").document(id).get().await()
-                    val following = followingSnapshot.toObject(User::class.java)
-                    Pair(id, following?.name ?: following?.username ?: "Unknown")
-                }
-                _followingWithNames.value = followingList
-
-            } catch (e: Exception) {
-                Log.e("ProfileViewModel", "Error fetching data: ${e.message}", e)
-                _fetchError.value = "Error loading profile: ${e.message}"
-            } finally {
-                _isLoading.value = false
             }
+
+            if (result == null) {
+                Log.w("ProfileViewModel", "Profile load timed out for userId: $userId")
+                _fetchError.value = "Profile load timed out"
+            }
+
+            Log.d("ProfileViewModel", "Profile load completed for userId: $userId")
+            _isLoading.value = false
         }
     }
 
@@ -317,7 +435,6 @@ class ProfileViewModel(
                     it.copy(following = newFollowing)
                 }
 
-                // Recargar followers y following después de toggle
                 loadProfileData(userId = _userState.value?.id ?: return@launch)
             } catch (e: Exception) {
                 _errorState.value = "Error toggling follow: ${e.message}"
@@ -333,15 +450,19 @@ class ProfileViewModel(
                 senderId = currentUser.id,
                 receiverId = targetUserId,
                 content = content,
-                timestamp = Timestamp.now()
+                timestamp = Timestamp.now(),
+                isRead = false
             )
             try {
+                Log.d("ProfileViewModel", "Attempting to send message: $message")
                 firestore.collection("messages")
                     .document(message.id)
                     .set(message)
                     .await()
+                Log.d("ProfileViewModel", "Message sent successfully: $message")
                 _messages.value = _messages.value + message
             } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error sending message: ${e.message}", e)
                 _errorState.value = "Error sending message: ${e.message}"
             }
         }
@@ -351,32 +472,226 @@ class ProfileViewModel(
         viewModelScope.launch {
             val currentUserId = authManager.getCurrentUser()?.id ?: return@launch
             try {
+                Log.d("ProfileViewModel", "Loading messages between $currentUserId and $targetUserId")
                 val messagesSnapshot = firestore.collection("messages")
                     .whereIn("senderId", listOf(currentUserId, targetUserId))
                     .whereIn("receiverId", listOf(currentUserId, targetUserId))
                     .orderBy("timestamp")
                     .get()
                     .await()
-                _messages.value = messagesSnapshot.documents.map { doc ->
-                    Message(
-                        id = doc.getString("id") ?: "",
+                val messages = messagesSnapshot.documents.mapNotNull { doc ->
+                    val message = doc.toObject<Message>()
+                    message?.copy(
+                        id = doc.id,
                         senderId = doc.getString("senderId") ?: "",
                         receiverId = doc.getString("receiverId") ?: "",
                         content = doc.getString("content") ?: "",
-                        timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now()
+                        timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                        isRead = doc.getBoolean("isRead") ?: false
                     )
                 }
+                Log.d("ProfileViewModel", "Loaded ${messages.size} messages: $messages")
+                _messages.value = messages
+
+                // Mark messages as read
+                messages.filter { it.receiverId == currentUserId && !it.isRead }.forEach { message ->
+                    firestore.collection("messages")
+                        .document(message.id)
+                        .update("isRead", true)
+                        .await()
+                    Log.d("ProfileViewModel", "Marked message as read: ${message.id}")
+                }
             } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error loading messages: ${e.message}", e)
                 _errorState.value = "Error loading messages: ${e.message}"
             }
         }
     }
-}
 
-data class Message(
-    val id: String = "",
-    val senderId: String = "",
-    val receiverId: String = "",
-    val content: String = "",
-    val timestamp: Timestamp = Timestamp.now()
-)
+    fun loadConversations() {
+        viewModelScope.launch {
+            val currentUserId = authManager.getCurrentUser()?.id ?: return@launch
+            try {
+                Log.d("ProfileViewModel", "Loading conversations for user: $currentUserId")
+                val messagesSnapshot = firestore.collection("messages")
+                    .whereIn("senderId", listOf(currentUserId))
+                    .whereIn("receiverId", listOf(currentUserId))
+                    .orderBy("timestamp")
+                    .get()
+                    .await()
+
+                val messages = messagesSnapshot.documents.mapNotNull { doc ->
+                    val message = doc.toObject<Message>()
+                    message?.copy(
+                        id = doc.id,
+                        senderId = doc.getString("senderId") ?: "",
+                        receiverId = doc.getString("receiverId") ?: "",
+                        content = doc.getString("content") ?: "",
+                        timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                        isRead = doc.getBoolean("isRead") ?: false
+                    )
+                }
+                Log.d("ProfileViewModel", "Loaded ${messages.size} messages for conversations: $messages")
+
+                // Group messages by conversation (pair of users)
+                val conversationMap = mutableMapOf<String, MutableList<Message>>()
+                messages.forEach { message ->
+                    val otherUserId = if (message.senderId == currentUserId) message.receiverId else message.senderId
+                    val conversationId = if (currentUserId < otherUserId) "$currentUserId-$otherUserId" else "$otherUserId-$currentUserId"
+                    val conversationMessages = conversationMap.getOrPut(conversationId) { mutableListOf() }
+                    conversationMessages.add(message)
+                }
+
+                // Convert grouped messages into conversations
+                val conversations = conversationMap.map { (conversationId, messages) ->
+                    val otherUserId = messages.first().let {
+                        if (it.senderId == currentUserId) it.receiverId else it.senderId
+                    }
+                    val userSnapshot = firestore.collection("users").document(otherUserId).get().await()
+                    val user = userSnapshot.toObject<User>()
+                    val lastMessage = messages.maxByOrNull { it.timestamp }!!
+                    Conversation(
+                        userId = otherUserId,
+                        username = user?.name ?: user?.username ?: "Unknown",
+                        handle = "@${user?.username ?: "unknown"}",
+                        lastMessage = lastMessage.content,
+                        date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(lastMessage.timestamp.toDate()),
+                        profileImageUrl = user?.photoUrl ?: ""
+                    )
+                }.sortedByDescending { it.date }
+
+                Log.d("ProfileViewModel", "Loaded ${conversations.size} conversations: $conversations")
+                _conversations.value = conversations
+
+                // Count unread messages
+                val unreadCount = messages.count { it.receiverId == currentUserId && !it.isRead }
+                Log.d("ProfileViewModel", "Unread messages count: $unreadCount")
+                _unreadMessagesCount.value = unreadCount
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error loading conversations: ${e.message}", e)
+                _errorState.value = "Error loading conversations: ${e.message}"
+            }
+        }
+    }
+
+    fun setupMessagesListener() {
+        viewModelScope.launch {
+            val currentUserId = authManager.getCurrentUser()?.id ?: return@launch
+            Log.d("ProfileViewModel", "Setting up messages listener for user: $currentUserId")
+            firestore.collection("messages")
+                .whereIn("senderId", listOf(currentUserId))
+                .whereIn("receiverId", listOf(currentUserId))
+                .orderBy("timestamp")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("ProfileViewModel", "Error listening to messages: ${error.message}", error)
+                        _errorState.value = "Error listening to messages: ${error.message}"
+                        return@addSnapshotListener
+                    }
+
+                    if (snapshot == null) {
+                        Log.w("ProfileViewModel", "Snapshot is null")
+                        return@addSnapshotListener
+                    }
+
+                    viewModelScope.launch {
+                        val messages = snapshot.documents.mapNotNull { doc ->
+                            val message = doc.toObject<Message>()
+                            message?.copy(
+                                id = doc.id,
+                                senderId = doc.getString("senderId") ?: "",
+                                receiverId = doc.getString("receiverId") ?: "",
+                                content = doc.getString("content") ?: "",
+                                timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                                isRead = doc.getBoolean("isRead") ?: false
+                            )
+                        }
+                        Log.d("ProfileViewModel", "Snapshot received, ${messages.size} messages: $messages")
+
+                        // Group messages by conversation
+                        val conversationMap = mutableMapOf<String, MutableList<Message>>()
+                        messages.forEach { message ->
+                            val otherUserId = if (message.senderId == currentUserId) message.receiverId else message.senderId
+                            val conversationId = if (currentUserId < otherUserId) "$currentUserId-$otherUserId" else "$otherUserId-$currentUserId"
+                            val conversationMessages = conversationMap.getOrPut(conversationId) { mutableListOf() }
+                            conversationMessages.add(message)
+                        }
+
+                        // Convert grouped messages into conversations
+                        val conversations = conversationMap.map { (conversationId, messages) ->
+                            val otherUserId = messages.first().let {
+                                if (it.senderId == currentUserId) it.receiverId else it.senderId
+                            }
+                            val userSnapshot = firestore.collection("users").document(otherUserId).get().await()
+                            val user = userSnapshot.toObject<User>()
+                            val lastMessage = messages.maxByOrNull { it.timestamp }!!
+                            Conversation(
+                                userId = otherUserId,
+                                username = user?.name ?: user?.username ?: "Unknown",
+                                handle = "@${user?.username ?: "unknown"}",
+                                lastMessage = lastMessage.content,
+                                date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(lastMessage.timestamp.toDate()),
+                                profileImageUrl = user?.photoUrl ?: ""
+                            )
+                        }.sortedByDescending { it.date }
+
+                        Log.d("ProfileViewModel", "Updated ${conversations.size} conversations: $conversations")
+                        _conversations.value = conversations
+
+                        // Update unread messages count
+                        val unreadCount = messages.count { it.receiverId == currentUserId && !it.isRead }
+                        Log.d("ProfileViewModel", "Updated unread messages count: $unreadCount")
+                        _unreadMessagesCount.value = unreadCount
+                    }
+                }
+        }
+    }
+
+    fun setupMessagesListenerForChat(targetUserId: String) {
+        viewModelScope.launch {
+            val currentUserId = authManager.getCurrentUser()?.id ?: return@launch
+            Log.d("ProfileViewModel", "Setting up messages listener for chat between $currentUserId and $targetUserId")
+            firestore.collection("messages")
+                .whereIn("senderId", listOf(currentUserId, targetUserId))
+                .whereIn("receiverId", listOf(currentUserId, targetUserId))
+                .orderBy("timestamp")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.e("ProfileViewModel", "Error listening to chat messages: ${error.message}", error)
+                        _errorState.value = "Error listening to chat messages: ${error.message}"
+                        return@addSnapshotListener
+                    }
+
+                    if (snapshot == null) {
+                        Log.w("ProfileViewModel", "Chat snapshot is null")
+                        return@addSnapshotListener
+                    }
+
+                    viewModelScope.launch {
+                        val messages = snapshot.documents.mapNotNull { doc ->
+                            val message = doc.toObject<Message>()
+                            message?.copy(
+                                id = doc.id,
+                                senderId = doc.getString("senderId") ?: "",
+                                receiverId = doc.getString("receiverId") ?: "",
+                                content = doc.getString("content") ?: "",
+                                timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                                isRead = doc.getBoolean("isRead") ?: false
+                            )
+                        }
+                        Log.d("ProfileViewModel", "Chat snapshot received, ${messages.size} messages: $messages")
+                        _messages.value = messages
+
+                        // Mark messages as read
+                        messages.filter { it.receiverId == currentUserId && !it.isRead }.forEach { message ->
+                            firestore.collection("messages")
+                                .document(message.id)
+                                .update("isRead", true)
+                                .await()
+                            Log.d("ProfileViewModel", "Marked chat message as read: ${message.id}")
+                        }
+                    }
+                }
+        }
+    }
+}

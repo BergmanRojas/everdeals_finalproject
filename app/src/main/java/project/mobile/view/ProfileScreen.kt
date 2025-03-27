@@ -30,7 +30,8 @@ fun ProfileScreen(
     onAddProductClick: () -> Unit,
     onProfileClick: () -> Unit,
     isOwnProfile: Boolean,
-    navController: NavController
+    navController: NavController,
+    userId: String = "" // Nuevo parámetro
 ) {
     val user by viewModel.userState.collectAsState()
     val error by viewModel.errorState.collectAsState()
@@ -43,11 +44,18 @@ fun ProfileScreen(
 
     var selectedTab by remember { mutableStateOf(1) }
 
-    LaunchedEffect(user) {
-        Log.d("ProfileScreen", "User state: $user, isOwnProfile: $isOwnProfile")
-        if (user == null && !isLoading) {
-            Log.w("ProfileScreen", "User is null and not loading, redirecting to login")
-            onSignOut()
+    LaunchedEffect(userId) {
+        Log.d("ProfileScreen", "Loading profile for userId: $userId, isOwnProfile: $isOwnProfile")
+        viewModel.loadProfileData(userId)
+    }
+
+    LaunchedEffect(user, isLoading) {
+        Log.d("ProfileScreen", "User state updated: $user, isOwnProfile: $isOwnProfile, isLoading: $isLoading")
+        if (user == null && !isLoading && fetchError != null) {
+            Log.w("ProfileScreen", "User is null, not loading, and fetch error occurred: $fetchError")
+            if (isOwnProfile) {
+                onSignOut()
+            }
         }
     }
 
@@ -118,7 +126,8 @@ fun ProfileScreen(
                             selectedTab = newTab
                             Log.d("ProfileScreen", "Tab selected: $newTab")
                         },
-                        navController = navController
+                        navController = navController,
+                        viewModel = viewModel // Pasamos viewModel
                     )
                 } else {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -149,7 +158,7 @@ fun ProfileScreen(
                                         navController.navigate(Screen.ProductDetail.createRoute(product.id))
                                     },
                                     onUserClick = { userId ->
-                                        navController.navigate(Screen.Profile.route)
+                                        navController.navigate(Screen.Profile.createRoute(userId, false))
                                     }
                                 )
                             }

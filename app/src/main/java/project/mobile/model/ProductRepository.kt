@@ -1,12 +1,14 @@
 package project.mobile.model
 
+import android.util.Log
+import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-import android.util.Log
-import com.google.firebase.firestore.FieldValue
 
 class ProductRepository(private val authRepository: AuthRepository) {
     private val firestore = FirebaseFirestore.getInstance()
@@ -16,6 +18,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
     private val transactionsCollection = firestore.collection("transactions")
     private val userBalanceCollection = firestore.collection("user_balance")
     private val withdrawalsCollection = firestore.collection("withdrawals")
+    private val alertsCollection = firestore.collection("alerts") // Nueva colección para alertas
 
     suspend fun getProducts(): List<Product> {
         return try {
@@ -24,9 +27,9 @@ class ProductRepository(private val authRepository: AuthRepository) {
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
-            
+
             Log.d("ProductRepository", "Documentos encontrados: ${snapshot.documents.size}")
-            
+
             val products = snapshot.documents.mapNotNull { doc ->
                 try {
                     val product = doc.toObject(Product::class.java)
@@ -41,7 +44,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
                     null
                 }
             }
-            
+
             Log.d("ProductRepository", "Total de productos cargados: ${products.size}")
             products
         } catch (e: Exception) {
@@ -171,7 +174,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
                 .whereEqualTo("productId", productId)
                 .get()
                 .await()
-            
+
             val comments = snapshot.toObjects(Comment::class.java)
             comments.sortedByDescending { it.createdAt }
         } catch (e: Exception) {
@@ -215,7 +218,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
     suspend fun incrementProductClicks(productId: String, userId: String) {
         try {
             Log.d("ProductRepository", "Incrementando clicks para producto $productId y usuario $userId")
-            
+
             // Primero obtener el producto para tener la información necesaria
             val product = getProductById(productId)
             if (product == null) {
@@ -266,7 +269,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
     suspend fun getAffiliateStatsForUser(userId: String): List<AffiliateStats> {
         return try {
             Log.d("ProductRepository", "Obteniendo estadísticas para usuario: $userId")
-            
+
             // Obtener estadísticas donde el usuario es el creador del producto
             val statsQuery = affiliateStatsCollection
                 .whereEqualTo("userId", userId)
@@ -320,11 +323,11 @@ class ProductRepository(private val authRepository: AuthRepository) {
             val previousStats = statsRef.get().await()
             val previousSales = previousStats.getLong("sales")?.toInt() ?: 0
             val salesDifference = newSales - previousSales
-            
+
             if (salesDifference > 0) {
                 // Calcular las nuevas ganancias (2% de comisión)
                 val newEarnings = salesDifference * product.currentPrice * 0.02
-                
+
                 // Actualizar el balance del usuario
                 updateUserBalance(userId, newEarnings)
             }
@@ -368,7 +371,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
                     val currentSales = snapshot.getLong("sales") ?: 0
                     val currentEarnings = snapshot.getDouble("earnings") ?: 0.0
                     val commission = saleAmount * 0.02 // 2% de comisión
-                    transaction.update(docRef, 
+                    transaction.update(docRef,
                         mapOf(
                             "sales" to currentSales + 1,
                             "earnings" to currentEarnings + commission
@@ -385,7 +388,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
     suspend fun getTransactions(userId: String): List<Transaction> {
         return try {
             Log.d("ProductRepository", "Obteniendo transacciones para usuario: $userId")
-            
+
             val transactionDocs = transactionsCollection
                 .whereEqualTo("userId", userId)
                 .get()
@@ -429,7 +432,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
     suspend fun getWithdrawals(userId: String): List<Map<String, Any>> {
         return try {
             Log.d("ProductRepository", "Obteniendo retiros para usuario: $userId")
-            
+
             // Obtener los retiros sin ordenar
             val withdrawalDocs = withdrawalsCollection
                 .whereEqualTo("userId", userId)
@@ -441,11 +444,11 @@ class ProductRepository(private val authRepository: AuthRepository) {
 
             // Ordenar en memoria y mapear los documentos
             withdrawalDocs
-                .mapNotNull { doc -> 
-                    doc.data?.plus("id" to doc.id) 
+                .mapNotNull { doc ->
+                    doc.data?.plus("id" to doc.id)
                 }
-                .sortedByDescending { 
-                    (it["createdAt"] as? Timestamp)?.toDate() 
+                .sortedByDescending {
+                    (it["createdAt"] as? Timestamp)?.toDate()
                 }
         } catch (e: Exception) {
             Log.e("ProductRepository", "Error getting withdrawals", e)
@@ -458,7 +461,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
             // Verificar el balance actual del usuario
             val stats = getAffiliateStatsForUser(userId)
             val totalEarnings = stats.sumOf { it.earnings }
-            
+
             // Obtener el total de retiros completados
             val completedWithdrawals = transactionsCollection
                 .whereEqualTo("userId", userId)
@@ -478,7 +481,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
             // Crear la transacción con el ID único
             val transactionId = UUID.randomUUID().toString()
             val timestamp = Timestamp.now()
-            
+
             val transaction = hashMapOf(
                 "id" to transactionId,
                 "userId" to userId,
@@ -554,5 +557,61 @@ class ProductRepository(private val authRepository: AuthRepository) {
             throw e
         }
     }
-}
 
+    // Nuevas funciones para manejar alertas
+    suspend fun getAlerts(userId: String): List<Alert> {
+        return try {
+            Log.d("ProductRepository", "Obteniendo alertas para usuario: $userId")
+            val snapshot = alertsCollection
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+            val alerts = snapshot.documents.mapNotNull { doc ->
+                doc.toObject<Alert>()
+            }
+            Log.d("ProductRepository", "Alertas cargadas: ${alerts.size}")
+            alerts
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error al cargar alertas: ${e.message}")
+            emptyList()
+        }
+    }
+
+    suspend fun getMatchingProducts(userId: String): List<Product> {
+        return try {
+            Log.d("ProductRepository", "Obteniendo productos coincidentes para usuario: $userId")
+            // Primero, obtenemos las alertas del usuario
+            val alerts = getAlerts(userId)
+            val keywords = alerts.map { it.keyword.lowercase() }
+
+            // Luego, buscamos productos que coincidan con las palabras clave
+            val snapshot = productsCollection.get().await()
+            val allProducts = snapshot.documents.mapNotNull { doc ->
+                doc.toObject<Product>()
+            }
+
+            // Filtramos los productos que coincidan con las palabras clave
+            val matchingProducts = allProducts.filter { product ->
+                keywords.any { keyword ->
+                    product.name.lowercase().contains(keyword) ||
+                            product.description.lowercase().contains(keyword)
+                }
+            }
+            Log.d("ProductRepository", "Productos coincidentes encontrados: ${matchingProducts.size}")
+            matchingProducts
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error al obtener productos coincidentes: ${e.message}")
+            emptyList()
+        }
+    }
+
+    fun createAlert(alert: Alert): Task<Void> {
+        Log.d("ProductRepository", "Creando alerta: $alert")
+        return alertsCollection.document(alert.id).set(alert)
+    }
+
+    fun deleteAlert(alertId: String): Task<Void> {
+        Log.d("ProductRepository", "Eliminando alerta: $alertId")
+        return alertsCollection.document(alertId).delete()
+    }
+}

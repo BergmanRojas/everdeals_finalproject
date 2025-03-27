@@ -1,13 +1,13 @@
 package project.mobile.navigation
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,16 +38,18 @@ import project.mobile.model.User
 import project.mobile.model.UserPreferences
 import project.mobile.util.AmazonScraper
 import project.mobile.view.AddProductScreen
+import project.mobile.view.ChatScreen
 import project.mobile.view.ForumScreen
 import project.mobile.view.LoginScreen
 import project.mobile.view.MainScreenContent
+import project.mobile.view.MessagesScreen
 import project.mobile.view.ProductDetailScreen
 import project.mobile.view.ProfileScreen
 import project.mobile.view.RegisterScreen
 import project.mobile.view.SettingsScreen
+import project.mobile.view.screens.AffiliateScreen
 import project.mobile.view.screens.ForgotPasswordScreen
 import project.mobile.view.screens.SplashScreenContent
-import project.mobile.view.screens.AffiliateScreen
 
 @Composable
 fun AppNavigation() {
@@ -67,9 +69,9 @@ fun AppNavigation() {
     var currentUser by remember { mutableStateOf<User?>(null) }
 
     val currentRoute by navController.currentBackStackEntryAsState()
-    val currentScreen = currentRoute?.destination?.route ?: "splash"
+    val currentScreen = currentRoute?.destination?.route ?: Screen.Splash.route
 
-    val excludedRoutes = listOf("splash", "login", "register", "forgot_password")
+    val excludedRoutes = listOf(Screen.Splash.route, Screen.Login.route, Screen.Register.route, Screen.ForgotPassword.route)
 
     var selectedItem by remember { mutableStateOf("Menu") }
 
@@ -88,10 +90,11 @@ fun AppNavigation() {
             if (isLoggedIn && currentScreen !in excludedRoutes) {
                 BottomNavigationBar(
                     navController = navController,
-                    onAddProductClick = { navController.navigate("add_product") },
+                    onAddProductClick = { navController.navigate(Screen.AddProduct.route) },
                     onProfileClick = {
                         scope.launch {
-                            navController.navigate(Screen.Profile.route)
+                            val userId = authManager.getCurrentUser()?.id ?: return@launch
+                            navController.navigate(Screen.Profile.createRoute(userId, true))
                         }
                     },
                     selectedItem = selectedItem,
@@ -103,49 +106,49 @@ fun AppNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "splash",
+            startDestination = Screen.Splash.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("splash") {
+            composable(Screen.Splash.route) {
                 SplashScreenContent()
                 LaunchedEffect(Unit) {
                     delay(2000L)
                     isLoggedIn = authManager.checkSession()
                     if (isLoggedIn) {
                         currentUser = authManager.getCurrentUser()
-                        navController.navigate("main") {
-                            popUpTo("splash") { inclusive = true }
+                        navController.navigate(Screen.Main.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     } else {
-                        navController.navigate("login") {
-                            popUpTo("splash") { inclusive = true }
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     }
                 }
             }
 
-            composable("login") {
+            composable(Screen.Login.route) {
                 LoginScreen(
-                    onNavigateToRegister = { navController.navigate("register") },
+                    onNavigateToRegister = { navController.navigate(Screen.Register.route) },
                     onLoginSuccess = {
                         scope.launch {
                             isLoggedIn = true
                             currentUser = authManager.getCurrentUser()
-                            navController.navigate("main") {
-                                popUpTo("login") { inclusive = true }
+                            navController.navigate(Screen.Main.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
                             }
                         }
                     },
-                    onNavigateToForgotPassword = { navController.navigate("forgot_password") },
+                    onNavigateToForgotPassword = { navController.navigate(Screen.ForgotPassword.route) },
                     authManager = authManager
                 )
             }
 
-            composable("register") {
+            composable(Screen.Register.route) {
                 RegisterScreen(
                     onNavigateToLogin = {
-                        navController.navigate("login") {
-                            popUpTo("register") { inclusive = true }
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Register.route) { inclusive = true }
                         }
                     },
                     authRepository = authRepository,
@@ -154,7 +157,7 @@ fun AppNavigation() {
                 )
             }
 
-            composable("main") {
+            composable(Screen.Main.route) {
                 val productViewModel: ProductViewModel = viewModel(
                     factory = ProductViewModel.Factory(
                         context.applicationContext as Application,
@@ -164,14 +167,16 @@ fun AppNavigation() {
                     )
                 )
                 MainScreenContent(
-                    onAddProductClick = { navController.navigate("add_product") },
-                    onProfileClick = {
+                    onAddProductClick = { navController.navigate(Screen.AddProduct.route) },
+                    onProfileClick = { // Corrección aquí
                         scope.launch {
-                            navController.navigate(Screen.Profile.route)
+                            val userId = authManager.getCurrentUser()?.id ?: return@launch
+                            navController.navigate(Screen.Profile.createRoute(userId, true))
                         }
                     },
                     productViewModel = productViewModel,
-                    navController = navController
+                    navController = navController,
+                    authManager = authManager
                 )
             }
 
@@ -187,7 +192,7 @@ fun AppNavigation() {
                 AffiliateScreen(productViewModel = productViewModel)
             }
 
-            composable("add_product") {
+            composable(Screen.AddProduct.route) {
                 val productViewModel: ProductViewModel = viewModel(
                     factory = ProductViewModel.Factory(
                         context.applicationContext as Application,
@@ -224,13 +229,22 @@ fun AppNavigation() {
                     onNavigateBack = { navController.popBackStack() },
                     productViewModel = productViewModel,
                     authManager = authManager,
-                    onUserClick = {
-                        navController.navigate(Screen.Profile.route)
-                    }
+                    onUserClick = { navController.navigate(Screen.Profile.createRoute(productId, false)) },
+                    navController = navController
                 )
             }
 
-            composable(Screen.Profile.route) {
+            composable(
+                route = Screen.Profile.route,
+                arguments = listOf(
+                    navArgument("userId") { type = NavType.StringType },
+                    navArgument("isOwnProfile") { type = NavType.BoolType }
+                )
+            ) { backStackEntry ->
+                val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                val isOwnProfile = backStackEntry.arguments?.getBoolean("isOwnProfile") ?: true
+                val currentUserId = currentUser?.id
+                Log.d("AppNavigation", "Profile route: userId=$userId, isOwnProfile=$isOwnProfile, currentUserId=$currentUserId")
                 val profileViewModel: ProfileViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
@@ -242,31 +256,28 @@ fun AppNavigation() {
                 ProfileScreen(
                     viewModel = profileViewModel,
                     authManager = authManager,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToSettings = { navController.navigate("settings") },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                     onSignOut = {
                         scope.launch {
                             authManager.signOut()
                             isLoggedIn = false
                             currentUser = null
-                            navController.navigate("login") {
+                            navController.navigate(Screen.Login.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }
                     },
+                    onNavigateBack = { navController.popBackStack() },
                     onShareClick = { /* Implementar lógica de compartir */ },
-                    onAddProductClick = { navController.navigate("add_product") },
-                    onProfileClick = {
-                        scope.launch {
-                            navController.navigate(Screen.Profile.route)
-                        }
-                    },
-                    isOwnProfile = true,
-                    navController = navController
+                    onAddProductClick = { navController.navigate(Screen.AddProduct.route) },
+                    onProfileClick = { navController.navigate(Screen.Profile.createRoute(userId, isOwnProfile = false)) },
+                    isOwnProfile = isOwnProfile,
+                    navController = navController,
+                    userId = userId
                 )
             }
 
-            composable("settings") {
+            composable(Screen.Settings.route) {
                 LaunchedEffect(Unit) {
                     currentUser = authManager.getCurrentUser()
                 }
@@ -278,8 +289,8 @@ fun AppNavigation() {
                             authManager.signOut()
                             isLoggedIn = false
                             currentUser = null
-                            navController.navigate("login") {
-                                popUpTo("main") { inclusive = true }
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Main.route) { inclusive = true }
                             }
                         }
                     },
@@ -287,13 +298,13 @@ fun AppNavigation() {
                 )
             }
 
-            composable("forgot_password") {
+            composable(Screen.ForgotPassword.route) {
                 ForgotPasswordScreen(
                     onBackClick = { navController.popBackStack() }
                 )
             }
 
-            composable("forum") {
+            composable(Screen.Forum.route) {
                 val forumViewModel: ForumViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
@@ -304,6 +315,41 @@ fun AppNavigation() {
                 )
                 ForumScreen(
                     viewModel = forumViewModel,
+                    navController = navController
+                )
+            }
+
+            composable(Screen.Messages.route) {
+                MessagesScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    navController = navController,
+                    authManager = authManager
+                )
+            }
+
+            composable(
+                route = Screen.Chat.route,
+                arguments = listOf(
+                    navArgument("targetUserId") { type = NavType.StringType },
+                    navArgument("targetUserName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val targetUserId = backStackEntry.arguments?.getString("targetUserId") ?: ""
+                val targetUserName = backStackEntry.arguments?.getString("targetUserName") ?: ""
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return ProfileViewModel(authManager) as T
+                        }
+                    }
+                )
+                ChatScreen(
+                    targetUserId = targetUserId,
+                    targetUserName = targetUserName,
+                    viewModel = profileViewModel,
+                    authManager = authManager,
+                    onNavigateBack = { navController.popBackStack() },
                     navController = navController
                 )
             }

@@ -3,6 +3,7 @@ package project.mobile.model
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.tasks.await
@@ -19,7 +20,6 @@ class AuthRepository(private val userPreferences: UserPreferences) {
         return try {
             Log.d("AuthRepository", "Starting sign up process")
 
-            // Verificar si el username ya existe
             val usernameSnapshot = firestore.collection("users")
                 .whereEqualTo("username", username)
                 .get()
@@ -29,7 +29,6 @@ class AuthRepository(private val userPreferences: UserPreferences) {
                 return Result.failure(Exception("Username already taken"))
             }
 
-            // Verificar si el email ya existe
             val emailCheck = auth.fetchSignInMethodsForEmail(email).await()
             if (emailCheck.signInMethods?.isNotEmpty() == true) {
                 _authState.value = AuthState.Error("This email is already registered")
@@ -74,7 +73,9 @@ class AuthRepository(private val userPreferences: UserPreferences) {
                 "email" to user.email,
                 "username" to user.username,
                 "name" to user.name,
-                "photoUrl" to user.photoUrl
+                "photoUrl" to user.photoUrl,
+                "followers" to user.followers,
+                "following" to user.following
             )
             firestore.collection("users").document(user.id).set(userMap).await()
             Log.d("AuthRepository", "User saved to Firestore successfully")
@@ -106,6 +107,7 @@ class AuthRepository(private val userPreferences: UserPreferences) {
         auth.signOut()
         userPreferences.clearSession()
         _authState.value = AuthState.Idle
+        Log.d("AuthRepository", "User signed out")
     }
 
     suspend fun getCurrentUser(): User? {
@@ -118,7 +120,6 @@ class AuthRepository(private val userPreferences: UserPreferences) {
 
             Log.d("AuthRepository", "Fetching user data for ID: ${firebaseUser.uid}")
 
-            // Intentar obtener datos de Firestore
             val userDoc = firestore.collection("users")
                 .document(firebaseUser.uid)
                 .get()
@@ -132,7 +133,9 @@ class AuthRepository(private val userPreferences: UserPreferences) {
                         email = userData["email"] as? String ?: firebaseUser.email ?: "",
                         username = userData["username"] as? String ?: "",
                         name = userData["name"] as? String ?: "",
-                        photoUrl = userData["photoUrl"] as? String
+                        photoUrl = userData["photoUrl"] as? String,
+                        followers = userData["followers"] as? List<String> ?: emptyList(),
+                        following = userData["following"] as? List<String> ?: emptyList()
                     )
                     Log.d("AuthRepository", "User data retrieved from Firestore: $user")
                     user
@@ -146,11 +149,14 @@ class AuthRepository(private val userPreferences: UserPreferences) {
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Error getting current user: ${e.message}", e)
-            // Intentar crear un usuario fallback si Firestore falla
-            auth.currentUser?.let { createFallbackUser(it) } ?: run {
-                Log.e("AuthRepository", "No authenticated user available to create fallback")
-                null
+            if (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                val firebaseUser = auth.currentUser
+                if (firebaseUser != null) {
+                    Log.w("AuthRepository", "Permission denied, using fallback user")
+                    return createFallbackUser(firebaseUser)
+                }
             }
+            null
         }
     }
 
@@ -158,7 +164,7 @@ class AuthRepository(private val userPreferences: UserPreferences) {
         val fallbackUser = User(
             id = firebaseUser.uid,
             email = firebaseUser.email ?: "",
-            username = firebaseUser.displayName ?: "",
+            username = firebaseUser.displayName ?: "User_${firebaseUser.uid.take(8)}",
             name = firebaseUser.displayName ?: "",
             photoUrl = firebaseUser.photoUrl?.toString()
         )
@@ -170,8 +176,9 @@ class AuthRepository(private val userPreferences: UserPreferences) {
         val currentUser = auth.currentUser
         return if (currentUser != null) {
             try {
-                val token = currentUser.getIdToken(false).await().token
+                val token = currentUser.getIdToken(true).await().token // Forzar renovación del token
                 userPreferences.setSessionToken(token)
+                Log.d("AuthRepository", "Session refreshed successfully")
                 true
             } catch (e: Exception) {
                 Log.e("AuthRepository", "Error refreshing session: ${e.message}", e)

@@ -3,7 +3,8 @@ package project.mobile.model
 import com.google.firebase.Timestamp
 
 data class UserActivity(
-    val type: String, // "comment", "product_shared", "like", "dislike", "forum_created"
+    val type: String,
     val content: String,
-    val timestamp: Timestamp?
+    val timestamp: Timestamp?,
+    val userId: String = ""
 )
