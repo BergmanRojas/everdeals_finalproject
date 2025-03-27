@@ -48,6 +48,8 @@ import project.mobile.view.SettingsScreen
 import project.mobile.view.screens.ForgotPasswordScreen
 import project.mobile.view.screens.SplashScreenContent
 import project.mobile.view.screens.AffiliateScreen
+import project.mobile.controller.AlertViewModel
+import project.mobile.view.screens.AlertsScreen
 
 @Composable
 fun AppNavigation() {
@@ -305,6 +307,23 @@ fun AppNavigation() {
                 ForumScreen(
                     viewModel = forumViewModel,
                     navController = navController
+                )
+            }
+
+            composable(Screen.MyAlerts.route) {
+                val alertViewModel: AlertViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return AlertViewModel(productRepository, authRepository) as T
+                        }
+                    }
+                )
+                AlertsScreen(
+                    viewModel = alertViewModel,
+                    onProductClick = { productId ->
+                        navController.navigate(Screen.ProductDetail.createRoute(productId))
+                    }
                 )
             }
         }

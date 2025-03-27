@@ -16,6 +16,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
     private val transactionsCollection = firestore.collection("transactions")
     private val userBalanceCollection = firestore.collection("user_balance")
     private val withdrawalsCollection = firestore.collection("withdrawals")
+    private val alertsCollection = firestore.collection("alerts")
 
     suspend fun getProducts(): List<Product> {
         return try {
@@ -52,7 +53,7 @@ class ProductRepository(private val authRepository: AuthRepository) {
 
     suspend fun addProduct(product: Product): Result<Unit> {
         return try {
-            Log.d("ProductRepository", "Intentando añadir producto: ${product.name}")
+            Log.d("ProductRepository", "Attempting to add product: ${product.name}")
             val currentUser = authRepository.getCurrentUser()
                 ?: return Result.failure(Exception("User not authenticated"))
 
@@ -63,12 +64,70 @@ class ProductRepository(private val authRepository: AuthRepository) {
                 createdAt = Timestamp.now()
             )
 
-            Log.d("ProductRepository", "Guardando producto en Firestore: ${updatedProduct.id}")
+            Log.d("ProductRepository", "Saving product to Firestore: ${updatedProduct.id}")
             productsCollection.document(updatedProduct.id).set(updatedProduct).await()
-            Log.d("ProductRepository", "Producto guardado exitosamente")
+            Log.d("ProductRepository", "Product saved successfully")
+
+            // Check for matching alerts
+            Log.d("ProductRepository", "Checking for matching alerts")
+            val allAlerts = alertsCollection
+                .whereEqualTo("isActive", true)
+                .get()
+                .await()
+
+            Log.d("ProductRepository", "Found ${allAlerts.size()} total active alerts")
+
+            val matchingAlerts = allAlerts.documents.mapNotNull { doc ->
+                try {
+                    val alert = Alert(
+                        id = doc.id,
+                        userId = doc.getString("userId") ?: "",
+                        keyword = doc.getString("keyword") ?: "",
+                        isActive = doc.getBoolean("isActive") ?: true,
+                        createdAt = doc.getTimestamp("createdAt") ?: Timestamp.now()
+                    )
+
+                    val keyword = alert.keyword.lowercase().trim()
+                    val productName = updatedProduct.name.lowercase()
+                    val productDescription = updatedProduct.description.lowercase()
+
+                    if (productName.contains(keyword) || productDescription.contains(keyword)) {
+                        Log.d("ProductRepository", "Found matching alert - Keyword: $keyword, ProductName: $productName")
+                        alert
+                    } else null
+                } catch (e: Exception) {
+                    Log.e("ProductRepository", "Error processing alert document: ${e.message}")
+                    null
+                }
+            }
+
+            Log.d("ProductRepository", "Found ${matchingAlerts.size} matching alerts")
+
+            // Update matching products for each alert
+            matchingAlerts.forEach { alert ->
+                try {
+                    val matchingProductRef = firestore.collection("user_matching_products")
+                        .document("${alert.userId}_${updatedProduct.id}")
+
+                    val matchingProductData = hashMapOf(
+                        "alertId" to alert.id,
+                        "productId" to updatedProduct.id,
+                        "userId" to alert.userId,
+                        "createdAt" to Timestamp.now(),
+                        "isRead" to false,
+                        "keyword" to alert.keyword
+                    )
+
+                    matchingProductRef.set(matchingProductData).await()
+                    Log.d("ProductRepository", "Successfully added matching product for alert ${alert.id} and user ${alert.userId}")
+                } catch (e: Exception) {
+                    Log.e("ProductRepository", "Error adding matching product for alert ${alert.id}", e)
+                }
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e("ProductRepository", "Error al añadir producto: ${e.message}")
+            Log.e("ProductRepository", "Error adding product: ${e.message}")
             Result.failure(e)
         }
     }
@@ -552,6 +611,121 @@ class ProductRepository(private val authRepository: AuthRepository) {
         } catch (e: Exception) {
             Log.e("ProductRepository", "Error updating user balance", e)
             throw e
+        }
+    }
+
+    suspend fun getAlerts(userId: String): List<Alert> {
+        return try {
+            Log.d("ProductRepository", "Getting alerts for user: $userId")
+            
+            val alertDocs = alertsCollection
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isActive", true)
+                .get()
+                .await()
+                .documents
+
+            Log.d("ProductRepository", "Found ${alertDocs.size} alert documents")
+
+            alertDocs.mapNotNull { doc ->
+                try {
+                    Alert(
+                        id = doc.id,
+                        userId = doc.getString("userId") ?: "",
+                        keyword = doc.getString("keyword") ?: "",
+                        isActive = doc.getBoolean("isActive") ?: true,
+                        createdAt = doc.getTimestamp("createdAt") ?: Timestamp.now()
+                    )
+                } catch (e: Exception) {
+                    Log.e("ProductRepository", "Error converting document to Alert: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error getting alerts", e)
+            emptyList()
+        }
+    }
+
+    suspend fun createAlert(alert: Alert): Result<Unit> {
+        return try {
+            Log.d("ProductRepository", "Creating alert: ${alert.keyword}")
+            
+            val alertData = hashMapOf(
+                "userId" to alert.userId,
+                "keyword" to alert.keyword,
+                "isActive" to alert.isActive,
+                "createdAt" to alert.createdAt
+            )
+
+            alertsCollection.document(alert.id).set(alertData).await()
+            Log.d("ProductRepository", "Alert created successfully")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error creating alert", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAlert(alertId: String): Result<Unit> {
+        return try {
+            Log.d("ProductRepository", "Deleting alert: $alertId")
+            alertsCollection.document(alertId).delete().await()
+            Log.d("ProductRepository", "Alert deleted successfully")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error deleting alert", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getMatchingProducts(userId: String): List<Product> {
+        return try {
+            Log.d("ProductRepository", "Getting matching products for user: $userId")
+            
+            // Get all matching product IDs for the user
+            val matchingProductsSnapshot = firestore.collection("user_matching_products")
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+
+            Log.d("ProductRepository", "Found ${matchingProductsSnapshot.size()} matching product records")
+
+            val productIds = matchingProductsSnapshot.documents.mapNotNull { doc ->
+                doc.getString("productId")?.also { productId ->
+                    Log.d("ProductRepository", "Found matching product ID: $productId for keyword: ${doc.getString("keyword")}")
+                }
+            }
+
+            if (productIds.isEmpty()) {
+                Log.d("ProductRepository", "No matching product IDs found")
+                return emptyList()
+            }
+
+            Log.d("ProductRepository", "Fetching ${productIds.size} products from products collection")
+
+            // Get the actual products
+            val products = productIds.mapNotNull { productId ->
+                try {
+                    val productDoc = productsCollection.document(productId).get().await()
+                    val product = productDoc.toObject(Product::class.java)
+                    if (product != null) {
+                        Log.d("ProductRepository", "Successfully retrieved product: ${product.name}")
+                    } else {
+                        Log.e("ProductRepository", "Failed to convert document to Product: $productId")
+                    }
+                    product
+                } catch (e: Exception) {
+                    Log.e("ProductRepository", "Error fetching product $productId: ${e.message}")
+                    null
+                }
+            }
+
+            Log.d("ProductRepository", "Successfully retrieved ${products.size} matching products")
+            products.sortedByDescending { it.createdAt }
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Error getting matching products", e)
+            emptyList()
         }
     }
 }

@@ -105,7 +105,10 @@ fun BottomNavigationBar(
             selected = selectedItem == "My Alerts",
             onClick = {
                 onItemSelected("My Alerts")
-                // TODO: Añadir navegación si "My Alerts" tiene una ruta específica
+                navController.navigate(Screen.MyAlerts.route) {
+                    popUpTo(Screen.Main.route) { inclusive = false }
+                    launchSingleTop = true
+                }
             },
             icon = {
                 Box(
