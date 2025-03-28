@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import project.mobile.controller.AuthManager
+import project.mobile.controller.MessagingViewModel
 import project.mobile.controller.ProfileViewModel
 import project.mobile.model.User
 import project.mobile.ui.theme.EverDealsTheme
@@ -33,22 +34,23 @@ import java.util.*
 fun ChatScreen(
     targetUserId: String,
     targetUserName: String,
-    viewModel: ProfileViewModel,
+    messagingViewModel: MessagingViewModel,
+    profileViewModel: ProfileViewModel,
     authManager: AuthManager,
     onNavigateBack: () -> Unit,
     navController: NavController
 ) {
     val context = LocalContext.current
-    val messages by viewModel.messages.collectAsState()
-    val error by viewModel.errorState.collectAsState()
+    val messages by messagingViewModel.messages.collectAsState()
+    val error by messagingViewModel.errorState.collectAsState()
     var currentUser by remember { mutableStateOf<User?>(null) }
     var messageText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         currentUser = authManager.getCurrentUser()
         Log.d("ChatScreen", "Current user: ${currentUser?.id}")
-        viewModel.loadMessagesWithUser(targetUserId)
-        viewModel.setupMessagesListenerForChat(targetUserId)
+        messagingViewModel.loadMessagesWithUser(targetUserId)
+        messagingViewModel.setupMessagesListenerForChat(targetUserId)
     }
 
     LaunchedEffect(messages) {
@@ -67,7 +69,7 @@ fun ChatScreen(
     fun sendMessage() {
         if (messageText.isNotBlank()) {
             Log.d("ChatScreen", "Sending message to $targetUserId: $messageText")
-            viewModel.sendMessage(targetUserId, messageText)
+            messagingViewModel.sendMessage(targetUserId, messageText)
             messageText = ""
         }
     }
@@ -81,7 +83,7 @@ fun ChatScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             AsyncImage(
-                                model = viewModel.userState.value?.photoUrl ?: "",
+                                model = profileViewModel.userState.value?.photoUrl ?: "",
                                 contentDescription = "Profile Image",
                                 modifier = Modifier
                                     .size(32.dp)
@@ -150,7 +152,7 @@ fun ChatScreen(
             ) {
                 if (error != null) {
                     Text(
-                        text = "Error: $error",
+                        text = "Failed to load messages: $error",
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp)
                     )

@@ -14,7 +14,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import project.mobile.components.DealCard
 import project.mobile.controller.AuthManager
+import project.mobile.controller.MessagingViewModel
+import project.mobile.controller.ProductViewModel
 import project.mobile.controller.ProfileViewModel
+import project.mobile.controller.ForumViewModel
+import project.mobile.controller.StatsViewModel
+import project.mobile.model.ForumTopic
+import project.mobile.model.Product
+import project.mobile.model.UserActivity
 import project.mobile.navigation.Screen
 import java.text.SimpleDateFormat
 import java.util.*
@@ -22,6 +29,10 @@ import java.util.*
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    productViewModel: ProductViewModel,
+    messagingViewModel: MessagingViewModel,
+    forumViewModel: ForumViewModel,
+    statsViewModel: StatsViewModel,
     authManager: AuthManager,
     onNavigateToSettings: () -> Unit,
     onSignOut: () -> Unit,
@@ -31,14 +42,14 @@ fun ProfileScreen(
     onProfileClick: () -> Unit,
     isOwnProfile: Boolean,
     navController: NavController,
-    userId: String = "" // Nuevo parámetro
+    userId: String = ""
 ) {
     val user by viewModel.userState.collectAsState()
     val error by viewModel.errorState.collectAsState()
-    val activities by viewModel.activities.collectAsState()
-    val deals by viewModel.deals.collectAsState()
-    val forumTopics by viewModel.forumTopics.collectAsState()
-    val stats by viewModel.stats.collectAsState()
+    val activities by statsViewModel.activities.collectAsState(initial = emptyList<UserActivity>())
+    val products by statsViewModel.products.collectAsState(initial = emptyList<Product>()) // Cambiado a statsViewModel
+    val forumTopics by forumViewModel.forumTopics.collectAsState(initial = emptyList<ForumTopic>())
+    val stats by statsViewModel.stats.collectAsState(initial = emptyList<String>())
     val isLoading by viewModel.isLoading.collectAsState()
     val fetchError by viewModel.fetchError.collectAsState()
 
@@ -47,6 +58,8 @@ fun ProfileScreen(
     LaunchedEffect(userId) {
         Log.d("ProfileScreen", "Loading profile for userId: $userId, isOwnProfile: $isOwnProfile")
         viewModel.loadProfileData(userId)
+        statsViewModel.loadStats(userId)
+        // No es necesario llamar a loadForumTopics porque es privado y se ejecuta en init
     }
 
     LaunchedEffect(user, isLoading) {
@@ -109,25 +122,26 @@ fun ProfileScreen(
                     isOwnProfile = isOwnProfile,
                     authManager = authManager,
                     onSendMessage = { message ->
-                        user?.id?.let { viewModel.sendMessage(it, message) }
+                        user?.id?.let { messagingViewModel.sendMessage(it, message) }
                     },
                     onNavigateBack = onNavigateBack,
-                    navController = navController
+                    navController = navController,
+                    deals = products
                 )
                 if (isOwnProfile) {
                     ProfileTabs(
                         activities = activities,
-                        deals = deals,
+                        deals = products,
                         forumTopics = forumTopics,
                         stats = stats,
-                        onLikeDislike = viewModel::toggleLikeDislike,
+                        onLikeDislike = productViewModel::toggleLikeDislike,
                         selectedTab = selectedTab,
                         onTabSelected = { newTab ->
                             selectedTab = newTab
                             Log.d("ProfileScreen", "Tab selected: $newTab")
                         },
                         navController = navController,
-                        viewModel = viewModel // Pasamos viewModel
+                        viewModel = viewModel
                     )
                 } else {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -136,7 +150,7 @@ fun ProfileScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 100.dp)
                     ) {
-                        if (deals.isEmpty()) {
+                        if (products.isEmpty()) {
                             item {
                                 Text(
                                     text = "No deals available",
@@ -148,11 +162,11 @@ fun ProfileScreen(
                                 )
                             }
                         } else {
-                            items(deals) { product ->
+                            items(products) { product ->
                                 DealCard(
                                     product = product,
                                     onLikeDislike = { productId, isLike ->
-                                        viewModel.toggleLikeDislike(productId, isLike)
+                                        productViewModel.toggleLikeDislike(productId, isLike)
                                     },
                                     onClick = {
                                         navController.navigate(Screen.ProductDetail.createRoute(product.id))

@@ -30,8 +30,10 @@ import project.mobile.controller.AppleAuthHandler
 import project.mobile.controller.AuthManager
 import project.mobile.controller.ForumViewModel
 import project.mobile.controller.GoogleAuthHandler
+import project.mobile.controller.MessagingViewModel // Añadido
 import project.mobile.controller.ProductViewModel
 import project.mobile.controller.ProfileViewModel
+import project.mobile.controller.StatsViewModel
 import project.mobile.model.AuthRepository
 import project.mobile.model.ProductRepository
 import project.mobile.model.User
@@ -43,6 +45,7 @@ import project.mobile.view.ForumScreen
 import project.mobile.view.LoginScreen
 import project.mobile.view.MainScreenContent
 import project.mobile.view.MessagesScreen
+import project.mobile.view.NewChatScreen
 import project.mobile.view.ProductDetailScreen
 import project.mobile.view.ProfileScreen
 import project.mobile.view.RegisterScreen
@@ -166,11 +169,19 @@ fun AppNavigation() {
                         authRepository
                     )
                 )
-                val profileViewModel: ProfileViewModel = viewModel( // Añadimos ProfileViewModel
+                val profileViewModel: ProfileViewModel = viewModel(
                     factory = object : ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
                             return ProfileViewModel(authManager) as T
+                        }
+                    }
+                )
+                val messagingViewModel: MessagingViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return MessagingViewModel(authManager) as T
                         }
                     }
                 )
@@ -183,9 +194,27 @@ fun AppNavigation() {
                         }
                     },
                     productViewModel = productViewModel,
-                    profileViewModel = profileViewModel, // Pasamos el parámetro
+                    profileViewModel = profileViewModel,
+                    messagingViewModel = messagingViewModel, // Añadido
                     navController = navController,
                     authManager = authManager
+                )
+            }
+
+            composable(Screen.Messages.route) {
+                val messagingViewModel: MessagingViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return MessagingViewModel(authManager) as T
+                        }
+                    }
+                )
+                MessagesScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    navController = navController,
+                    authManager = authManager,
+                    viewModel = messagingViewModel // Asegúrate de que MessagesScreen acepte este parámetro
                 )
             }
 
@@ -262,8 +291,44 @@ fun AppNavigation() {
                         }
                     }
                 )
+                val productViewModel: ProductViewModel = viewModel(
+                    factory = ProductViewModel.Factory(
+                        context.applicationContext as Application,
+                        productRepository,
+                        amazonScraper,
+                        authRepository
+                    )
+                )
+                val messagingViewModel: MessagingViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return MessagingViewModel(authManager) as T
+                        }
+                    }
+                )
+                val forumViewModel: ForumViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return ForumViewModel(authManager) as T
+                        }
+                    }
+                )
+                val statsViewModel: StatsViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return StatsViewModel(authManager) as T
+                        }
+                    }
+                )
                 ProfileScreen(
                     viewModel = profileViewModel,
+                    productViewModel = productViewModel,
+                    messagingViewModel = messagingViewModel,
+                    forumViewModel = forumViewModel,
+                    statsViewModel = statsViewModel,
                     authManager = authManager,
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                     onSignOut = {
@@ -329,10 +394,19 @@ fun AppNavigation() {
             }
 
             composable(Screen.Messages.route) {
+                val messagingViewModel: MessagingViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return MessagingViewModel(authManager) as T
+                        }
+                    }
+                )
                 MessagesScreen(
                     onNavigateBack = { navController.popBackStack() },
                     navController = navController,
-                    authManager = authManager
+                    authManager = authManager,
+                    viewModel = messagingViewModel // Añadido
                 )
             }
 
@@ -353,13 +427,38 @@ fun AppNavigation() {
                         }
                     }
                 )
+                val messagingViewModel: MessagingViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return MessagingViewModel(authManager) as T
+                        }
+                    }
+                )
                 ChatScreen(
                     targetUserId = targetUserId,
                     targetUserName = targetUserName,
-                    viewModel = profileViewModel,
+                    messagingViewModel = messagingViewModel, // Añadido para lógica de mensajería
+                    profileViewModel = profileViewModel,     // Renombrado y mantenido para perfil
                     authManager = authManager,
                     onNavigateBack = { navController.popBackStack() },
                     navController = navController
+                )
+            }
+            composable(Screen.NewChat.route) {
+                val messagingViewModel: MessagingViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return MessagingViewModel(authManager) as T
+                        }
+                    }
+                )
+                NewChatScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    navController = navController,
+                    authManager = authManager,
+                    viewModel = messagingViewModel
                 )
             }
         }

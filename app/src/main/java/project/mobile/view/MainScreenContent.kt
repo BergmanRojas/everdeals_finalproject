@@ -3,12 +3,36 @@ package project.mobile.view
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,19 +41,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import project.mobile.components.DealCard
+import project.mobile.controller.AuthManager
+import project.mobile.controller.MessagingViewModel
 import project.mobile.controller.ProductViewModel
+import project.mobile.controller.ProfileViewModel
 import project.mobile.navigation.Screen
 import project.mobile.navigation.TopNavigationBar
 import project.mobile.ui.theme.OrangeFF6200
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import kotlinx.coroutines.launch
-import project.mobile.controller.AuthManager
-import project.mobile.controller.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +55,8 @@ fun MainScreenContent(
     onAddProductClick: () -> Unit,
     onProfileClick: () -> Unit,
     productViewModel: ProductViewModel,
-    profileViewModel: ProfileViewModel, // Añadimos el parámetro
+    profileViewModel: ProfileViewModel,
+    messagingViewModel: MessagingViewModel, // Añadido
     navController: NavController,
     authManager: AuthManager
 ) {
@@ -75,7 +94,7 @@ fun MainScreenContent(
             TopNavigationBar(
                 productViewModel = productViewModel,
                 navController = navController,
-                profileViewModel = profileViewModel // Pasamos el parámetro
+                messagingViewModel = messagingViewModel // Cambiado de profileViewModel
             )
         },
         modifier = Modifier

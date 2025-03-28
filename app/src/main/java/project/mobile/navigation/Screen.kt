@@ -21,5 +21,6 @@ sealed class Screen(val route: String) {
     object Messages : Screen("messages") // Agregado
     object Chat : Screen("chat/{targetUserId}/{targetUserName}") {
         fun createRoute(targetUserId: String, targetUserName: String) = "chat/$targetUserId/$targetUserName"
-    } // Agregado
+    }
+    object NewChat : Screen("new_chat")// Agregado
 }

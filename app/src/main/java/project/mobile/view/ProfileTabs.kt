@@ -29,7 +29,7 @@ fun ProfileTabs(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
     navController: NavController,
-    viewModel: ProfileViewModel // Nuevo parámetro
+    viewModel: ProfileViewModel
 ) {
     val tabs = listOf("Activities", "Deals", "Forum", "Statistics")
 
@@ -107,7 +107,7 @@ fun ProfileTabs(
                     items(deals) { product ->
                         DealCard(
                             product = product,
-                            onLikeDislike = viewModel::toggleLikeDislike,
+                            onLikeDislike = onLikeDislike,
                             onClick = { navController.navigate(Screen.ProductDetail.createRoute(product.id)) },
                             onUserClick = { userId -> navController.navigate(Screen.Profile.createRoute(userId, isOwnProfile = false)) }
                         )

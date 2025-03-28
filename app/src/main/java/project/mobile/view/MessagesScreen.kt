@@ -10,7 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,14 +23,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import project.mobile.controller.AuthManager
-import project.mobile.controller.ProfileViewModel
-import project.mobile.model.AuthRepository
+import project.mobile.controller.MessagingViewModel
 import project.mobile.model.Conversation
-import project.mobile.model.UserPreferences
+import project.mobile.model.Message
+import project.mobile.navigation.Screen
 import project.mobile.ui.theme.EverDealsTheme
 import project.mobile.ui.theme.Purple9046FF
 
@@ -37,23 +38,19 @@ import project.mobile.ui.theme.Purple9046FF
 fun MessagesScreen(
     onNavigateBack: () -> Unit,
     navController: NavController,
-    authManager: AuthManager
+    authManager: AuthManager,
+    viewModel: MessagingViewModel
 ) {
     val context = LocalContext.current
-    val viewModel: ProfileViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return ProfileViewModel(authManager) as T
-            }
-        }
-    )
-
     var searchQuery by remember { mutableStateOf("") }
     val conversations by viewModel.conversations.collectAsState()
+    val messages by viewModel.messages.collectAsState()
     val error by viewModel.errorState.collectAsState()
+    var currentUserId by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
+        val user = authManager.getCurrentUser()
+        currentUserId = user?.id ?: ""
         viewModel.loadConversations()
         viewModel.setupMessagesListener()
     }
@@ -71,7 +68,6 @@ fun MessagesScreen(
         }
     }
 
-    // Filter conversations based on search query
     val filteredConversations = conversations.filter {
         it.username.contains(searchQuery, ignoreCase = true) ||
                 it.handle.contains(searchQuery, ignoreCase = true) ||
@@ -103,7 +99,7 @@ fun MessagesScreen(
             },
             floatingActionButton = {
                 FloatingActionButton(
-                    onClick = { /* TODO: Implement new conversation */ },
+                    onClick = { navController.navigate(Screen.NewChat.route) },
                     containerColor = Color(0xFF1DA1F2),
                     contentColor = Color.White
                 ) {
@@ -117,7 +113,6 @@ fun MessagesScreen(
                     .background(MaterialTheme.colorScheme.background)
                     .padding(padding)
             ) {
-                // Search field
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -167,7 +162,6 @@ fun MessagesScreen(
                         )
                     }
                 } else {
-                    // List of conversations
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -177,6 +171,8 @@ fun MessagesScreen(
                         items(filteredConversations) { conversation ->
                             ConversationItem(
                                 conversation = conversation,
+                                messages = messages,
+                                currentUserId = currentUserId,
                                 onClick = {
                                     navController.navigate("chat/${conversation.userId}/${conversation.username}")
                                 }
@@ -192,8 +188,14 @@ fun MessagesScreen(
 @Composable
 fun ConversationItem(
     conversation: Conversation,
+    messages: List<Message>,
+    currentUserId: String,
     onClick: () -> Unit
 ) {
+    val hasUnread = messages.any { message ->
+        message.receiverId == currentUserId && message.senderId == conversation.userId && !message.isRead
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -201,7 +203,6 @@ fun ConversationItem(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Profile image
         AsyncImage(
             model = conversation.profileImageUrl,
             contentDescription = "Profile Image",
@@ -213,7 +214,6 @@ fun ConversationItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Conversation details
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -227,23 +227,36 @@ fun ConversationItem(
                     text = conversation.username,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = if (hasUnread) Purple9046FF else MaterialTheme.colorScheme.onBackground
                 )
-                Text(
-                    text = conversation.date,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = conversation.date,
+                        fontSize = 12.sp,
+                        color = if (hasUnread) Purple9046FF else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (hasUnread) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Purple9046FF)
+                        )
+                    }
+                }
             }
             Text(
                 text = conversation.handle,
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (hasUnread) Purple9046FF else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = conversation.lastMessage,
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = if (hasUnread) Purple9046FF else MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )

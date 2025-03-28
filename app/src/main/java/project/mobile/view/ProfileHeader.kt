@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import project.mobile.R
 import project.mobile.controller.AuthManager
 import project.mobile.controller.ProfileViewModel
+import project.mobile.model.Product
 
 @Composable
 fun ProfileHeader(
@@ -47,10 +48,10 @@ fun ProfileHeader(
     authManager: AuthManager,
     onSendMessage: (String) -> Unit,
     onNavigateBack: () -> Unit,
-    navController: NavController // Añadimos navController
+    navController: NavController,
+    deals: List<Product> = emptyList()
 ) {
     val user by viewModel.userState.collectAsState()
-    val deals by viewModel.deals.collectAsState()
     val followersWithNames by viewModel.followersWithNames.collectAsState()
     val followingWithNames by viewModel.followingWithNames.collectAsState()
     val scope = rememberCoroutineScope()
