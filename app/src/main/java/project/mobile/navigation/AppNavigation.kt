@@ -166,15 +166,24 @@ fun AppNavigation() {
                         authRepository
                     )
                 )
+                val profileViewModel: ProfileViewModel = viewModel( // Añadimos ProfileViewModel
+                    factory = object : ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return ProfileViewModel(authManager) as T
+                        }
+                    }
+                )
                 MainScreenContent(
                     onAddProductClick = { navController.navigate(Screen.AddProduct.route) },
-                    onProfileClick = { // Corrección aquí
+                    onProfileClick = {
                         scope.launch {
                             val userId = authManager.getCurrentUser()?.id ?: return@launch
                             navController.navigate(Screen.Profile.createRoute(userId, true))
                         }
                     },
                     productViewModel = productViewModel,
+                    profileViewModel = profileViewModel, // Pasamos el parámetro
                     navController = navController,
                     authManager = authManager
                 )

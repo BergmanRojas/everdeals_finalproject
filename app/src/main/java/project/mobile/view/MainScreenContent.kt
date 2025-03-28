@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import kotlinx.coroutines.launch
 import project.mobile.controller.AuthManager
+import project.mobile.controller.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,22 +37,21 @@ fun MainScreenContent(
     onAddProductClick: () -> Unit,
     onProfileClick: () -> Unit,
     productViewModel: ProductViewModel,
+    profileViewModel: ProfileViewModel, // Añadimos el parámetro
     navController: NavController,
     authManager: AuthManager
-){
+) {
     val products by productViewModel.products.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
     var isLoading by remember { mutableStateOf(true) }
     val context = LocalContext.current
-    var navigationError by remember { mutableStateOf<String?>(null) } // Estado para manejar errores
+    var navigationError by remember { mutableStateOf<String?>(null) }
 
-    // Cargar productos iniciales
     LaunchedEffect(Unit) {
         productViewModel.loadProducts()
         isLoading = false
     }
 
-    // Cargar productos según la pestaña seleccionada
     LaunchedEffect(selectedTab) {
         isLoading = true
         when (selectedTab) {
@@ -63,11 +63,10 @@ fun MainScreenContent(
         isLoading = false
     }
 
-    // Mostrar Toast cuando ocurra un error de navegación
     LaunchedEffect(navigationError) {
         if (navigationError != null) {
             Toast.makeText(context, navigationError, Toast.LENGTH_SHORT).show()
-            navigationError = null // Resetear el error después de mostrarlo
+            navigationError = null
         }
     }
 
@@ -75,7 +74,8 @@ fun MainScreenContent(
         topBar = {
             TopNavigationBar(
                 productViewModel = productViewModel,
-                navController = navController
+                navController = navController,
+                profileViewModel = profileViewModel // Pasamos el parámetro
             )
         },
         modifier = Modifier
@@ -97,7 +97,7 @@ fun MainScreenContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
+                    TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                         color = OrangeFF6200
                     )
@@ -191,7 +191,7 @@ fun MainScreenContent(
                             onUserClick = { userId ->
                                 try {
                                     Log.d("MainScreen", "Attempting to navigate to profile for userId: $userId")
-                                    navController.navigate(Screen.Profile.createRoute(userId, false)) // Corrección aquí
+                                    navController.navigate(Screen.Profile.createRoute(userId, false))
                                     Log.d("MainScreen", "Navigation executed successfully")
                                 } catch (e: Exception) {
                                     Log.e("MainScreen", "Navigation failed: ${e.message}", e)

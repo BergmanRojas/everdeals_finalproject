@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -27,16 +28,17 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import project.mobile.R
 import project.mobile.controller.ProductViewModel
+import project.mobile.controller.ProfileViewModel
 import project.mobile.ui.theme.*
 
-// Colores para el gradiente del diálogo
-val PlayStationBlue = Color(0xFF00BFFF) // Azul claro
-val PlayStationPink = Color(0xFF9046FF) // Rosa claro
+val PlayStationBlue = Color(0xFF00BFFF)
+val PlayStationPink = Color(0xFF9046FF)
 
 @Composable
 fun TopNavigationBar(
     productViewModel: ProductViewModel,
-    navController: NavController
+    navController: NavController,
+    profileViewModel: ProfileViewModel
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showCategoryDialog by remember { mutableStateOf(false) }
@@ -47,14 +49,15 @@ fun TopNavigationBar(
 
     val categories by productViewModel.categories.collectAsState()
     val selectedCategory by productViewModel.selectedCategory.collectAsState()
+    val unreadMessagesCount by profileViewModel.unreadMessagesCount.collectAsState()
 
-    // Listas estáticas para los otros menús (reemplazar con datos dinámicos si los tienes)
+    val Purple9046FF = Color(0xFF9046FF)
+
     val couponsOptions = listOf("10% Off", "20% Off", "Free Shipping", "50% Off", "Buy 1 Get 1", "Free Gift", "Special Offer", "Limited Time")
     val dealsOptions = listOf("Daily Deals", "Flash Sales", "Clearance", "Weekend Special", "Holiday Sale", "Exclusive Offer", "Last Chance", "Hot Deals")
     val freeOptions = listOf("Free Items", "Free Trials", "Giveaways", "Free Samples", "Free Shipping", "Free Returns", "Free Setup", "Free Consultation")
     val forumOptions = listOf("General", "Tech", "Deals Discussion", "Gaming", "Fashion", "Food", "Travel", "DIY")
 
-    // Estados para las selecciones (puedes moverlos a ProductViewModel si lo prefieres)
     var selectedCoupon by remember { mutableStateOf<String?>(null) }
     var selectedDeal by remember { mutableStateOf<String?>(null) }
     var selectedFree by remember { mutableStateOf<String?>(null) }
@@ -68,16 +71,13 @@ fun TopNavigationBar(
                     colors = listOf(EverdealsYellow, EverdealsRed)
                 )
             )
-            .padding(top = 40.dp, bottom = 0.dp) // Solo padding vertical
+            .padding(top = 40.dp, bottom = 0.dp)
     ) {
-        // Search bar
         Box(
-            modifier = Modifier
-                .fillMaxWidth() // Sin padding horizontal
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(
@@ -144,42 +144,58 @@ fun TopNavigationBar(
                     textStyle = LocalTextStyle.current.copy(fontSize = 16.sp)
                 )
 
-                IconButton(
-                    onClick = {
-                        navController.navigate("add_product") {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                            launchSingleTop = true
-                        }
-                    },
+                Box(
                     modifier = Modifier
-                        .padding(start = 8.dp)
-                        .drawBehind {
-                            drawCircle(
-                                color = CircleBackground,
-                                radius = 12.dp.toPx(),
-                                center = Offset(center.x, center.y)
+                        .padding(start = 1.dp)
+                ) {
+                    IconButton(
+                        onClick = {
+                            navController.navigate(Screen.Messages.route) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_messages),
+                            contentDescription = "Messages",
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    if (unreadMessagesCount > 0) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(
+                                    x = 2.dp,
+                                    y = (-2).dp
+                                ), // Ajustamos el offset para que el badge se vea bien con el nuevo espaciado
+                            color = Purple9046FF.copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = unreadMessagesCount.toString(),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                             )
                         }
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_share),
-                        contentDescription = "Share",
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(54.dp)
-                    )
+                    }
                 }
             }
         }
 
-        // Horizontal scrollable buttons sin padding horizontal
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(vertical = 0.dp), // Solo padding vertical
+                .padding(vertical = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // Categories
             TextButton(
                 onClick = { showCategoryDialog = true },
                 modifier = Modifier
@@ -213,7 +229,6 @@ fun TopNavigationBar(
                 }
             }
 
-            // Coupons
             TextButton(
                 onClick = { showCouponsDialog = true },
                 modifier = Modifier
@@ -247,7 +262,6 @@ fun TopNavigationBar(
                 }
             }
 
-            // Deals
             TextButton(
                 onClick = { showDealsDialog = true },
                 modifier = Modifier
@@ -281,7 +295,6 @@ fun TopNavigationBar(
                 }
             }
 
-            // Free
             TextButton(
                 onClick = { showFreeDialog = true },
                 modifier = Modifier
@@ -315,7 +328,6 @@ fun TopNavigationBar(
                 }
             }
 
-            // Forum
             TextButton(
                 onClick = { showForumDialog = true },
                 modifier = Modifier
@@ -351,7 +363,6 @@ fun TopNavigationBar(
         }
     }
 
-    // Diálogos de selección (sin cambios)
     if (showCategoryDialog) {
         AlertDialog(
             onDismissRequest = { showCategoryDialog = false },
@@ -404,7 +415,6 @@ fun TopNavigationBar(
         )
     }
 
-    // Coupons selection dialog
     if (showCouponsDialog) {
         AlertDialog(
             onDismissRequest = { showCouponsDialog = false },
@@ -457,7 +467,6 @@ fun TopNavigationBar(
         )
     }
 
-    // Deals selection dialog
     if (showDealsDialog) {
         AlertDialog(
             onDismissRequest = { showDealsDialog = false },
@@ -510,7 +519,6 @@ fun TopNavigationBar(
         )
     }
 
-    // Free selection dialog
     if (showFreeDialog) {
         AlertDialog(
             onDismissRequest = { showFreeDialog = false },
@@ -563,7 +571,6 @@ fun TopNavigationBar(
         )
     }
 
-    // Forum selection dialog
     if (showForumDialog) {
         AlertDialog(
             onDismissRequest = { showForumDialog = false },
