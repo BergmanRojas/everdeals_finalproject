@@ -2,45 +2,14 @@ package project.mobile.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Mail
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Preview
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -149,7 +118,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { /* TODO: Implement edit OPTIONprofile */ },
+                onClick = { /* TODO: Implement edit profile */ },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -205,44 +174,6 @@ fun SettingsScreen(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-        // Avatar Change Section
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Change Avatar",
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(
-                    onClick = { /* TODO: Implement replace avatar */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Text("Replace", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                TextButton(
-                    onClick = { /* TODO: Implement remove avatar */ },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Remove")
-                }
-            }
-
-            Text(
-                text = "For optimal results use a square image",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
-
         // Log Out Button
         Spacer(modifier = Modifier.weight(1f))
         Button(
@@ -252,13 +183,12 @@ fun SettingsScreen(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text("Log Out", color = MaterialTheme.colorScheme.onError)
+            Text("Log Out", color = Color.White)
         }
     }
 }
-
 @Composable
-private fun SettingsItem(
+fun SettingsItem(
     title: String,
     icon: ImageVector,
     onClick: () -> Unit,
@@ -273,15 +203,18 @@ private fun SettingsItem(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = title,
             tint = color,
             modifier = Modifier.size(24.dp)
         )
+
         Spacer(modifier = Modifier.width(16.dp))
+
         Text(
             text = title,
-            color = color,
-            fontSize = 16.sp
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = color
         )
     }
 }

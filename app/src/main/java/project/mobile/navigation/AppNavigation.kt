@@ -441,7 +441,7 @@ fun AppNavigation() {
                     messagingViewModel = messagingViewModel, // Añadido para lógica de mensajería
                     profileViewModel = profileViewModel,     // Renombrado y mantenido para perfil
                     authManager = authManager,
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack(Screen.Messages.route, false) },
                     navController = navController
                 )
             }
@@ -455,7 +455,7 @@ fun AppNavigation() {
                     }
                 )
                 NewChatScreen(
-                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateBack = { navController.popBackStack(Screen.Messages.route, false) },
                     navController = navController,
                     authManager = authManager,
                     viewModel = messagingViewModel

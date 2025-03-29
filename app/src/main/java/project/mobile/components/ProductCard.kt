@@ -29,7 +29,11 @@ fun ProductCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Column {
             // Imagen del producto
@@ -58,7 +62,8 @@ fun ProductCard(
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = NumberFormat.getCurrencyInstance(Locale("es", "ES"))
@@ -99,7 +104,8 @@ fun ProductCard(
                         )
                         Text(
                             text = "${product.likes}",
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -115,11 +121,12 @@ fun ProductCard(
                         )
                         Text(
                             text = "${product.dislikes}",
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
         }
     }
-} 
+}

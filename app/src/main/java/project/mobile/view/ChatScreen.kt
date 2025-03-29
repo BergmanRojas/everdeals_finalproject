@@ -66,6 +66,12 @@ fun ChatScreen(
         }
     }
 
+    LaunchedEffect(error) {
+        if (error != null && !error!!.contains("Permission_Denied")) {
+            Log.e("ChatScreen", "Error: $error")
+        }
+    }
+
     fun sendMessage() {
         if (messageText.isNotBlank()) {
             Log.d("ChatScreen", "Sending message to $targetUserId: $messageText")

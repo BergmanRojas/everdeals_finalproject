@@ -8,6 +8,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -57,7 +58,8 @@ class MessagingViewModel(
                     .set(message)
                     .await()
                 Log.d("MessagingViewModel", "Message sent successfully: $message")
-                _messages.value = _messages.value + message
+
+
             } catch (e: Exception) {
                 Log.e("MessagingViewModel", "Error sending message: ${e.message}", e)
                 _errorState.value = "Error sending message: ${e.message}"
@@ -70,32 +72,44 @@ class MessagingViewModel(
             val currentUserId = authManager.getCurrentUser()?.id ?: return@launch
             try {
                 Log.d("MessagingViewModel", "Loading messages between $currentUserId and $targetUserId")
-                val messagesSnapshot = firestore.collection("messages")
-                    .whereIn("senderId", listOf(currentUserId, targetUserId))
-                    .whereIn("receiverId", listOf(currentUserId, targetUserId))
+
+                val sentMessagesSnapshot = firestore.collection("messages")
+                    .whereEqualTo("senderId", currentUserId)
+                    .whereEqualTo("receiverId", targetUserId)
                     .orderBy("timestamp")
                     .get()
                     .await()
-                val messages = messagesSnapshot.documents.mapNotNull { doc ->
-                    val message = doc.toObject<Message>()
-                    message?.copy(
-                        id = doc.id,
-                        senderId = doc.getString("senderId") ?: "",
-                        receiverId = doc.getString("receiverId") ?: "",
-                        content = doc.getString("content") ?: "",
-                        timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                        isRead = doc.getBoolean("read") ?: false // Cambiado a "read"
-                    )
-                }
-                Log.d("MessagingViewModel", "Loaded ${messages.size} messages: $messages")
-                _messages.value = messages
 
-                // Mark messages as read
+                val receivedMessagesSnapshot = firestore.collection("messages")
+                    .whereEqualTo("senderId", targetUserId)
+                    .whereEqualTo("receiverId", currentUserId)
+                    .orderBy("timestamp")
+                    .get()
+                    .await()
+
+                val messages = (sentMessagesSnapshot.documents + receivedMessagesSnapshot.documents)
+                    .mapNotNull { doc ->
+                        val message = doc.toObject<Message>()
+                        message?.copy(
+                            id = doc.id,
+                            senderId = doc.getString("senderId") ?: "",
+                            receiverId = doc.getString("receiverId") ?: "",
+                            content = doc.getString("content") ?: "",
+                            timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                            isRead = doc.getBoolean("read") ?: false
+                        )
+                    }
+                    .distinctBy { it.id }
+                    .sortedBy { it.timestamp.toDate().time }
+
+                Log.d("MessagingViewModel", "Loaded ${messages.size} messages: $messages")
+                _messages.value = messages // Reemplazar, no acumular
+
                 messages.filter { it.receiverId == currentUserId && !it.isRead }.forEach { message ->
                     try {
                         firestore.collection("messages")
                             .document(message.id)
-                            .update("read", true) // Cambiado a "read"
+                            .update("read", true)
                             .await()
                         Log.d("MessagingViewModel", "Marked message as read: ${message.id}")
                     } catch (e: Exception) {
@@ -137,7 +151,7 @@ class MessagingViewModel(
                             receiverId = doc.getString("receiverId") ?: "",
                             content = doc.getString("content") ?: "",
                             timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                            isRead = doc.getBoolean("read") ?: false // Cambiado a "read"
+                            isRead = doc.getBoolean("read") ?: false
                         )
                     }
                     .distinctBy { it.id }
@@ -188,6 +202,7 @@ class MessagingViewModel(
             val currentUserId = authManager.getCurrentUser()?.id ?: return@launch
             Log.d("MessagingViewModel", "Setting up messages listener for user: $currentUserId")
 
+            sentMessagesListener?.remove()
             sentMessagesListener = firestore.collection("messages")
                 .whereEqualTo("senderId", currentUserId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -197,74 +212,14 @@ class MessagingViewModel(
                         _errorState.value = "Error listening to sent messages: ${error.message}"
                         return@addSnapshotListener
                     }
-
                     if (snapshot == null) {
                         Log.w("MessagingViewModel", "Sent messages snapshot is null")
                         return@addSnapshotListener
                     }
-
-                    viewModelScope.launch {
-                        val messages = snapshot.documents.mapNotNull { doc ->
-                            val message = doc.toObject<Message>()
-                            message?.copy(
-                                id = doc.id,
-                                senderId = doc.getString("senderId") ?: "",
-                                receiverId = doc.getString("receiverId") ?: "",
-                                content = doc.getString("content") ?: "",
-                                timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                                isRead = doc.getBoolean("read") ?: false // Cambiado a "read"
-                            )
-                        }
-
-                        val currentMessages = _messages.value.toMutableList()
-                        messages.forEach { newMessage ->
-                            val existingIndex = currentMessages.indexOfFirst { it.id == newMessage.id }
-                            if (existingIndex != -1) {
-                                currentMessages[existingIndex] = newMessage
-                            } else {
-                                currentMessages.add(newMessage)
-                            }
-                        }
-
-                        val allMessages = currentMessages.distinctBy { it.id }
-                            .sortedByDescending { it.timestamp.toDate().time }
-
-                        Log.d("MessagingViewModel", "Sent messages snapshot received, ${allMessages.size} messages: $allMessages")
-
-                        val conversationMap = mutableMapOf<String, MutableList<Message>>()
-                        allMessages.forEach { message ->
-                            val otherUserId = if (message.senderId == currentUserId) message.receiverId else message.senderId
-                            val conversationId = if (currentUserId < otherUserId) "$currentUserId-$otherUserId" else "$otherUserId-$currentUserId"
-                            val conversationMessages = conversationMap.getOrPut(conversationId) { mutableListOf() }
-                            conversationMessages.add(message)
-                        }
-
-                        val conversations = conversationMap.map { (conversationId, messages) ->
-                            val otherUserId = messages.first().let {
-                                if (it.senderId == currentUserId) it.receiverId else it.senderId
-                            }
-                            val userSnapshot = firestore.collection("users").document(otherUserId).get().await()
-                            val user = userSnapshot.toObject<User>()
-                            val lastMessage = messages.maxByOrNull { it.timestamp }!!
-                            Conversation(
-                                userId = otherUserId,
-                                username = user?.name ?: user?.username ?: "Unknown",
-                                handle = "@${user?.username ?: "unknown"}",
-                                lastMessage = lastMessage.content,
-                                date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(lastMessage.timestamp.toDate()),
-                                profileImageUrl = user?.photoUrl ?: ""
-                            )
-                        }.sortedByDescending { it.date }
-
-                        Log.d("MessagingViewModel", "Updated ${conversations.size} conversations: $conversations")
-                        _conversations.value = conversations
-
-                        val unreadCount = allMessages.count { it.receiverId == currentUserId && !it.isRead }
-                        Log.d("MessagingViewModel", "Updated unread messages count (sent): $unreadCount")
-                        _unreadMessagesCount.value = unreadCount
-                    }
+                    loadConversations() // Actualizar conversaciones
                 }
 
+            receivedMessagesListener?.remove()
             receivedMessagesListener = firestore.collection("messages")
                 .whereEqualTo("receiverId", currentUserId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -274,72 +229,11 @@ class MessagingViewModel(
                         _errorState.value = "Error listening to received messages: ${error.message}"
                         return@addSnapshotListener
                     }
-
                     if (snapshot == null) {
                         Log.w("MessagingViewModel", "Received messages snapshot is null")
                         return@addSnapshotListener
                     }
-
-                    viewModelScope.launch {
-                        val messages = snapshot.documents.mapNotNull { doc ->
-                            val message = doc.toObject<Message>()
-                            message?.copy(
-                                id = doc.id,
-                                senderId = doc.getString("senderId") ?: "",
-                                receiverId = doc.getString("receiverId") ?: "",
-                                content = doc.getString("content") ?: "",
-                                timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                                isRead = doc.getBoolean("read") ?: false // Cambiado a "read"
-                            )
-                        }
-
-                        val currentMessages = _messages.value.toMutableList()
-                        messages.forEach { newMessage ->
-                            val existingIndex = currentMessages.indexOfFirst { it.id == newMessage.id }
-                            if (existingIndex != -1) {
-                                currentMessages[existingIndex] = newMessage
-                            } else {
-                                currentMessages.add(newMessage)
-                            }
-                        }
-
-                        val allMessages = currentMessages.distinctBy { it.id }
-                            .sortedByDescending { it.timestamp.toDate().time }
-
-                        Log.d("MessagingViewModel", "Received messages snapshot received, ${allMessages.size} messages: $allMessages")
-
-                        val conversationMap = mutableMapOf<String, MutableList<Message>>()
-                        allMessages.forEach { message ->
-                            val otherUserId = if (message.senderId == currentUserId) message.receiverId else message.senderId
-                            val conversationId = if (currentUserId < otherUserId) "$currentUserId-$otherUserId" else "$otherUserId-$currentUserId"
-                            val conversationMessages = conversationMap.getOrPut(conversationId) { mutableListOf() }
-                            conversationMessages.add(message)
-                        }
-
-                        val conversations = conversationMap.map { (conversationId, messages) ->
-                            val otherUserId = messages.first().let {
-                                if (it.senderId == currentUserId) it.receiverId else it.senderId
-                            }
-                            val userSnapshot = firestore.collection("users").document(otherUserId).get().await()
-                            val user = userSnapshot.toObject<User>()
-                            val lastMessage = messages.maxByOrNull { it.timestamp }!!
-                            Conversation(
-                                userId = otherUserId,
-                                username = user?.name ?: user?.username ?: "Unknown",
-                                handle = "@${user?.username ?: "unknown"}",
-                                lastMessage = lastMessage.content,
-                                date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(lastMessage.timestamp.toDate()),
-                                profileImageUrl = user?.photoUrl ?: ""
-                            )
-                        }.sortedByDescending { it.date }
-
-                        Log.d("MessagingViewModel", "Updated ${conversations.size} conversations: $conversations")
-                        _conversations.value = conversations
-
-                        val unreadCount = allMessages.count { it.receiverId == currentUserId && !it.isRead }
-                        Log.d("MessagingViewModel", "Updated unread messages count (received): $unreadCount")
-                        _unreadMessagesCount.value = unreadCount
-                    }
+                    loadConversations() // Actualizar conversaciones
                 }
         }
     }
@@ -349,132 +243,122 @@ class MessagingViewModel(
             val currentUserId = authManager.getCurrentUser()?.id ?: return@launch
             Log.d("MessagingViewModel", "Setting up messages listener for chat between $currentUserId and $targetUserId")
 
-            val sentChatMessagesListener = firestore.collection("messages")
-                .whereEqualTo("senderId", currentUserId)
-                .whereEqualTo("receiverId", targetUserId)
-                .orderBy("timestamp", Query.Direction.ASCENDING)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        Log.e("MessagingViewModel", "Error listening to sent chat messages: ${error.message}", error)
-                        _errorState.value = "Error listening to sent chat messages: ${error.message}"
-                        return@addSnapshotListener
-                    }
-
-                    if (snapshot == null) {
-                        Log.w("MessagingViewModel", "Sent chat messages snapshot is null")
-                        return@addSnapshotListener
-                    }
-
-                    viewModelScope.launch {
-                        val messages = snapshot.documents.mapNotNull { doc ->
-                            val message = doc.toObject<Message>()
-                            message?.copy(
-                                id = doc.id,
-                                senderId = doc.getString("senderId") ?: "",
-                                receiverId = doc.getString("receiverId") ?: "",
-                                content = doc.getString("content") ?: "",
-                                timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                                isRead = doc.getBoolean("read") ?: false // Cambiado a "read"
-                            )
-                        }
-
-                        val currentMessages = _messages.value.toMutableList()
-                        messages.forEach { newMessage ->
-                            val existingIndex = currentMessages.indexOfFirst { it.id == newMessage.id }
-                            if (existingIndex != -1) {
-                                currentMessages[existingIndex] = newMessage
-                            } else {
-                                currentMessages.add(newMessage)
-                            }
-                        }
-
-                        val allMessages = currentMessages.distinctBy { it.id }
-                            .sortedBy { it.timestamp.toDate().time }
-
-                        Log.d("MessagingViewModel", "Chat snapshot received (sent), ${allMessages.size} messages: $allMessages")
-                        _messages.value = allMessages
-
-                        val messagesToMarkAsRead = allMessages.filter { it.receiverId == currentUserId && !it.isRead }
-                        Log.d("MessagingViewModel", "Found ${messagesToMarkAsRead.size} messages to mark as read")
-                        messagesToMarkAsRead.forEach { message ->
-                            try {
-                                firestore.collection("messages")
-                                    .document(message.id)
-                                    .update("read", true) // Cambiado a "read"
-                                    .await()
-                                Log.d("MessagingViewModel", "Marked chat message as read: ${message.id}")
-                            } catch (e: Exception) {
-                                Log.e("MessagingViewModel", "Error marking chat message as read: ${e.message}", e)
-                                _errorState.value = "Error marking chat message as read: ${e.message}"
-                            }
-                        }
-                    }
-                }
-
-            val receivedChatMessagesListener = firestore.collection("messages")
-                .whereEqualTo("senderId", targetUserId)
-                .whereEqualTo("receiverId", currentUserId)
-                .orderBy("timestamp", Query.Direction.ASCENDING)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        Log.e("MessagingViewModel", "Error listening to received chat messages: ${error.message}", error)
-                        _errorState.value = "Error listening to received chat messages: ${error.message}"
-                        return@addSnapshotListener
-                    }
-
-                    if (snapshot == null) {
-                        Log.w("MessagingViewModel", "Received chat messages snapshot is null")
-                        return@addSnapshotListener
-                    }
-
-                    viewModelScope.launch {
-                        val messages = snapshot.documents.mapNotNull { doc ->
-                            val message = doc.toObject<Message>()
-                            message?.copy(
-                                id = doc.id,
-                                senderId = doc.getString("senderId") ?: "",
-                                receiverId = doc.getString("receiverId") ?: "",
-                                content = doc.getString("content") ?: "",
-                                timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
-                                isRead = doc.getBoolean("read") ?: false // Cambiado a "read"
-                            )
-                        }
-
-                        val currentMessages = _messages.value.toMutableList()
-                        messages.forEach { newMessage ->
-                            val existingIndex = currentMessages.indexOfFirst { it.id == newMessage.id }
-                            if (existingIndex != -1) {
-                                currentMessages[existingIndex] = newMessage
-                            } else {
-                                currentMessages.add(newMessage)
-                            }
-                        }
-
-                        val allMessages = currentMessages.distinctBy { it.id }
-                            .sortedBy { it.timestamp.toDate().time }
-
-                        Log.d("MessagingViewModel", "Chat snapshot received (received), ${allMessages.size} messages: $allMessages")
-                        _messages.value = allMessages
-
-                        val messagesToMarkAsRead = allMessages.filter { it.receiverId == currentUserId && !it.isRead }
-                        Log.d("MessagingViewModel", "Found ${messagesToMarkAsRead.size} messages to mark as read")
-                        messagesToMarkAsRead.forEach { message ->
-                            try {
-                                firestore.collection("messages")
-                                    .document(message.id)
-                                    .update("read", true) // Cambiado a "read"
-                                    .await()
-                                Log.d("MessagingViewModel", "Marked chat message as read: ${message.id}")
-                            } catch (e: Exception) {
-                                Log.e("MessagingViewModel", "Error marking chat message as read: ${e.message}", e)
-                                _errorState.value = "Error marking chat message as read: ${e.message}"
-                            }
-                        }
-                    }
-                }
-
             chatMessagesListener?.remove()
-            chatMessagesListener = sentChatMessagesListener
+
+            // Primero intentamos cargar desde caché
+            try {
+                val cachedMessages = loadMessagesFromCache(currentUserId, targetUserId)
+                if (cachedMessages.isNotEmpty()) {
+                    _messages.value = cachedMessages
+                }
+            } catch (e: Exception) {
+                Log.w("MessagingViewModel", "Error loading cached messages: ${e.message}")
+            }
+
+            chatMessagesListener = firestore.collection("messages")
+                .whereIn("senderId", listOf(currentUserId, targetUserId))
+                .whereIn("receiverId", listOf(currentUserId, targetUserId))
+                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        if (error.message?.contains("PERMISSION_DENIED") == true) {
+                            Log.w("MessagingViewModel", "Permission denied, falling back to cache")
+                            viewModelScope.launch {
+                                try {
+                                    val cachedMessages = loadMessagesFromCache(currentUserId, targetUserId)
+                                    if (cachedMessages.isNotEmpty()) {
+                                        _messages.value = cachedMessages
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("MessagingViewModel", "Error loading cached messages: ${e.message}")
+                                    _errorState.value = "Error loading messages: ${e.message}"
+                                }
+                            }
+                            return@addSnapshotListener
+                        }
+                        Log.e("MessagingViewModel", "Error listening to chat messages: ${error.message}", error)
+                        _errorState.value = "Error loading messages: ${error.message}"
+                        return@addSnapshotListener
+                    }
+
+                    snapshot?.let { safeSnapshot ->
+                        viewModelScope.launch {
+                            val messages = safeSnapshot.documents.mapNotNull { doc ->
+                                val message = doc.toObject<Message>()
+                                message?.copy(
+                                    id = doc.id,
+                                    senderId = doc.getString("senderId") ?: "",
+                                    receiverId = doc.getString("receiverId") ?: "",
+                                    content = doc.getString("content") ?: "",
+                                    timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                                    isRead = doc.getBoolean("read") ?: false
+                                )
+                            }.filter {
+                                (it.senderId == currentUserId && it.receiverId == targetUserId) ||
+                                        (it.senderId == targetUserId && it.receiverId == currentUserId)
+                            }.sortedBy { it.timestamp.toDate().time }
+
+                            Log.d("MessagingViewModel", "Chat snapshot received, ${messages.size} messages: $messages")
+                            _messages.value = messages
+
+                            val messagesToMarkAsRead = messages.filter { it.receiverId == currentUserId && !it.isRead }
+                            messagesToMarkAsRead.forEach { message ->
+                                try {
+                                    firestore.collection("messages")
+                                        .document(message.id)
+                                        .update("read", true)
+                                        .await()
+                                    Log.d("MessagingViewModel", "Marked chat message as read: ${message.id}")
+                                } catch (e: Exception) {
+                                    Log.e("MessagingViewModel", "Error marking chat message as read: ${e.message}", e)
+                                    _errorState.value = "Error marking chat message as read: ${e.message}"
+                                }
+                            }
+                        }
+                    } ?: run {
+                        Log.w("MessagingViewModel", "Snapshot is null, attempting to load from cache")
+                        viewModelScope.launch {
+                            try {
+                                val cachedMessages = loadMessagesFromCache(currentUserId, targetUserId)
+                                if (cachedMessages.isNotEmpty()) {
+                                    _messages.value = cachedMessages
+                                }
+                            } catch (e: Exception) {
+                                Log.e("MessagingViewModel", "Error loading cached messages: ${e.message}")
+                            }
+                        }
+                    }
+                }
+        }
+    }
+
+    private suspend fun loadMessagesFromCache(currentUserId: String, targetUserId: String): List<Message> {
+        return try {
+            Log.d("MessagingViewModel", "Attempting to load messages from cache")
+            val snapshot = firestore.collection("messages")
+                .whereIn("senderId", listOf(currentUserId, targetUserId))
+                .whereIn("receiverId", listOf(currentUserId, targetUserId))
+                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .get(Source.CACHE)
+                .await()
+
+            snapshot.documents.mapNotNull { doc ->
+                val message = doc.toObject<Message>()
+                message?.copy(
+                    id = doc.id,
+                    senderId = doc.getString("senderId") ?: "",
+                    receiverId = doc.getString("receiverId") ?: "",
+                    content = doc.getString("content") ?: "",
+                    timestamp = doc.getTimestamp("timestamp") ?: Timestamp.now(),
+                    isRead = doc.getBoolean("read") ?: false
+                )
+            }.filter {
+                (it.senderId == currentUserId && it.receiverId == targetUserId) ||
+                        (it.senderId == targetUserId && it.receiverId == currentUserId)
+            }.sortedBy { it.timestamp.toDate().time }
+        } catch (e: Exception) {
+            Log.e("MessagingViewModel", "Error loading messages from cache", e)
+            emptyList()
         }
     }
 

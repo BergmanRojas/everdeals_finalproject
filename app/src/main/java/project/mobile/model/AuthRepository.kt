@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.tasks.await
@@ -15,31 +16,46 @@ class AuthRepository(private val userPreferences: UserPreferences) {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        return try {
+            val snapshot = firestore.collection("users")
+                .whereEqualTo("username", username)
+                .limit(1)
+                .get(Source.SERVER)  // Forzar consulta en servidor para consistencia
+                .await()
+            snapshot.isEmpty
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "Error checking username availability", e)
+            false // En caso de error, asumir que no está disponible para prevenir duplicados
+        }
+    }
+
     suspend fun signUp(email: String, password: String, username: String): Result<Unit> {
         _authState.value = AuthState.Loading
         return try {
             Log.d("AuthRepository", "Starting sign up process")
+            Log.d("AuthRepository", "Current user before username check: ${auth.currentUser?.uid}")
 
-            val usernameSnapshot = firestore.collection("users")
-                .whereEqualTo("username", username)
-                .get()
-                .await()
-            if (usernameSnapshot.documents.isNotEmpty()) {
+            // Verificar si el username ya existe (usando la nueva función)
+            if (!isUsernameAvailable(username)) {
                 _authState.value = AuthState.Error("This username is already taken")
                 return Result.failure(Exception("Username already taken"))
             }
 
-            val emailCheck = auth.fetchSignInMethodsForEmail(email).await()
-            if (emailCheck.signInMethods?.isNotEmpty() == true) {
+            // Verificar si el email ya está registrado (opcional)
+            val signInMethods = auth.fetchSignInMethodsForEmail(email).await()
+            if (signInMethods.signInMethods?.isNotEmpty() == true) {
                 _authState.value = AuthState.Error("This email is already registered")
                 return Result.failure(Exception("Email already registered"))
             }
 
+            // Crear usuario en Firebase Auth
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
             val userId = authResult.user?.uid ?: throw Exception("Failed to create user")
 
             Log.d("AuthRepository", "User created in Auth with ID: $userId")
 
+            // Crear objeto User
             val user = User(
                 id = userId,
                 email = email,
@@ -48,6 +64,7 @@ class AuthRepository(private val userPreferences: UserPreferences) {
                 photoUrl = null
             )
 
+            // Guardar en Firestore
             saveUserToFirestore(user)
 
             val token = authResult.user?.getIdToken(false)?.await()?.token
@@ -84,6 +101,7 @@ class AuthRepository(private val userPreferences: UserPreferences) {
             throw e
         }
     }
+
 
     suspend fun signIn(email: String, password: String): Result<Unit> {
         return try {

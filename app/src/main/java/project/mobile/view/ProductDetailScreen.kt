@@ -26,15 +26,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import project.mobile.R
 import project.mobile.controller.AuthManager
 import project.mobile.controller.ProductViewModel
 import project.mobile.model.Comment
 import project.mobile.model.Product
 import project.mobile.model.User
-import project.mobile.ui.theme.EverdealsRed
+import project.mobile.ui.theme.EverDealsTheme
 import project.mobile.ui.theme.OrangeFF6200
+import project.mobile.ui.theme.RedFF0000
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -66,245 +66,287 @@ fun ProductDetailScreen(
         currentUser.value = productViewModel.getCurrentUser()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A1A),
-                    navigationIconContentColor = Color.White
+    EverDealsTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Product details",
+                                color = OrangeFF6200,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(end = 48.dp)
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                painter = painterResource(R.drawable.back_icon),
+                                contentDescription = "Back",
+                                tint = OrangeFF6200
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        navigationIconContentColor = OrangeFF6200,
+                        titleContentColor = OrangeFF6200
+                    )
                 )
-            )
-        },
-        containerColor = Color(0xFF1A1A1A)
-    ) { padding ->
-        if (product == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = OrangeFF6200)
-            }
-        } else {
-            val currentProduct = product!!
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                // Imagen del producto con gradiente
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                    ) {
-                        AsyncImage(
-                            model = currentProduct.imageUrl,
-                            contentDescription = "Product image",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { padding ->
+            if (product == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = OrangeFF6200) // Progress en naranja
+                }
+            } else {
+                val currentProduct = product!!
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    item {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, Color(0xFF1A1A1A)),
-                                        startY = 0f,
-                                        endY = Float.POSITIVE_INFINITY
+                                .fillMaxWidth()
+                                .height(200.dp)
+                        ) {
+                            AsyncImage(
+                                model = currentProduct.imageUrl,
+                                contentDescription = "Product image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Transparent,
+                                                Color.Transparent,
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.7f)
+                                            ),
+                                            startY = 0f,
+                                            endY = 500f
+                                        )
                                     )
-                                )
-                        )
+                            )
+                        }
                     }
-                }
 
-                // Información del producto
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "${currentProduct.currentPrice}€",
-                                            color = EverdealsRed,
-                                            fontSize = 20.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "${currentProduct.originalPrice}€",
-                                            color = Color.Gray,
-                                            fontSize = 14.sp,
-                                            textDecoration = TextDecoration.LineThrough
-                                        )
-                                        Surface(
-                                            color = EverdealsRed.copy(alpha = 0.9f),
-                                            shape = RoundedCornerShape(6.dp)
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             Text(
-                                                text = "-${calculateDiscount(currentProduct.originalPrice, currentProduct.currentPrice)}%",
-                                                color = Color.White,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                text = "${currentProduct.currentPrice}€",
+                                                color = RedFF0000,
+                                                fontSize = 20.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "${currentProduct.originalPrice}€",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 14.sp,
+                                                textDecoration = TextDecoration.LineThrough
+                                            )
+                                            Surface(
+                                                color = RedFF0000.copy(alpha = 0.9f),
+                                                shape = RoundedCornerShape(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = "-${calculateDiscount(currentProduct.originalPrice, currentProduct.currentPrice)}%",
+                                                    color = MaterialTheme.colorScheme.onPrimary,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "Available at ${getStoreName(currentProduct.amazonUrl)}",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        IconButton(onClick = { productViewModel.toggleLikeDislike(currentProduct.id, false) }) {
+                                            Icon(
+                                                Icons.Default.ArrowDropDown,
+                                                "Dislike",
+                                                tint = if (currentProduct.dislikedBy.contains(currentUserId)) MaterialTheme.colorScheme.tertiary
+                                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Text(
+                                            text = "${currentProduct.likes - currentProduct.dislikes}°",
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        IconButton(onClick = { productViewModel.toggleLikeDislike(currentProduct.id, true) }) {
+                                            Icon(
+                                                Icons.Default.ArrowDropUp,
+                                                "Like",
+                                                tint = if (currentProduct.likedBy.contains(currentUserId)) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
-                                    Text(
-                                        text = "Available at ${getStoreName(currentProduct.amazonUrl)}",
-                                        color = Color.Gray,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
                                 }
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    IconButton(onClick = { productViewModel.toggleLikeDislike(currentProduct.id, false) }) {
-                                        Icon(
-                                            Icons.Default.ArrowDropDown,
-                                            "Dislike",
-                                            tint = if (currentProduct.dislikedBy.contains(currentUserId)) EverdealsRed else Color.Gray
-                                        )
-                                    }
-                                    Text(
-                                        text = "${currentProduct.likes - currentProduct.dislikes}°",
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    IconButton(onClick = { productViewModel.toggleLikeDislike(currentProduct.id, true) }) {
-                                        Icon(
-                                            Icons.Default.ArrowDropUp,
-                                            "Like",
-                                            tint = if (currentProduct.likedBy.contains(currentUserId)) OrangeFF6200 else Color.Gray
-                                        )
-                                    }
-                                }
-                            }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
 
-                            Text(
-                                text = currentProduct.name,
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            if (currentProduct.description.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = currentProduct.description,
-                                    color = Color.Gray,
-                                    fontSize = 14.sp
+                                    text = currentProduct.name,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Button(
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentProduct.amazonUrl))
-                                        context.startActivity(intent)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = EverdealsRed),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Go to deal", color = Color.White)
+                                if (currentProduct.description.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = currentProduct.description,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 14.sp
+                                    )
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                IconButton(
-                                    onClick = {
-                                        val shareIntent = Intent().apply {
-                                            action = Intent.ACTION_SEND
-                                            putExtra(Intent.EXTRA_TEXT, currentProduct.amazonUrl)
-                                            type = "text/plain"
-                                        }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Share deal"))
-                                    },
-                                    modifier = Modifier.background(Color(0xFF2A2A2A), CircleShape)
-                                ) {
-                                    Icon(Icons.Default.Share, "Share", tint = Color.White)
-                                }
-                            }
-                        }
-                    }
-                }
 
-                // Sección de comentarios
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Comments",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = commentText,
-                            onValueChange = { commentText = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Write a comment...", color = Color.Gray) },
-                            trailingIcon = {
-                                IconButton(onClick = {
-                                    if (commentText.isNotBlank()) {
-                                        productViewModel.addComment(productId, commentText)
-                                        commentText = ""
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentProduct.amazonUrl))
+                                            context.startActivity(intent)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = RedFF0000
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Go to deal", color = MaterialTheme.colorScheme.onPrimary)
                                     }
-                                }) {
-                                    Icon(Icons.Default.Send, "Send", tint = OrangeFF6200)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    IconButton(
+                                        onClick = {
+                                            val shareIntent = Intent().apply {
+                                                action = Intent.ACTION_SEND
+                                                putExtra(Intent.EXTRA_TEXT, currentProduct.amazonUrl)
+                                                type = "text/plain"
+                                            }
+                                            context.startActivity(Intent.createChooser(shareIntent, "Share deal"))
+                                        },
+                                        modifier = Modifier.background(
+                                            MaterialTheme.colorScheme.surface,
+                                            CircleShape
+                                        )
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Share,
+                                            "Share",
+                                            tint = MaterialTheme.colorScheme.onBackground
+                                        )
+                                    }
                                 }
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFF2A2A2A),
-                                unfocusedContainerColor = Color(0xFF2A2A2A),
-                                focusedBorderColor = OrangeFF6200,
-                                unfocusedBorderColor = Color.Gray,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
-                items(comments) { comment ->
-                    CommentItem(
-                        comment = comment,
-                        onReply = { replyText ->
-                            productViewModel.replyToComment(productId, comment.id, replyText)
+                            }
                         }
-                    )
+                    }
+
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Comments",
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = commentText,
+                                onValueChange = { commentText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = {
+                                    Text(
+                                        "Write a comment...",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = {
+                                        if (commentText.isNotBlank()) {
+                                            productViewModel.addComment(productId, commentText)
+                                            commentText = ""
+                                        }
+                                    }) {
+                                        Icon(
+                                            Icons.Default.Send,
+                                            "Send",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                    items(comments) { comment ->
+                        CommentItem(
+                            comment = comment,
+                            onReply = { replyText ->
+                                productViewModel.replyToComment(productId, comment.id, replyText)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -323,7 +365,9 @@ fun CommentItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         shape = RoundedCornerShape(8.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -333,19 +377,19 @@ fun CommentItem(
             ) {
                 Text(
                     text = comment.userName,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = formatTimestamp(comment.createdAt),
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = comment.text,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(
@@ -353,7 +397,7 @@ fun CommentItem(
             ) {
                 Text(
                     text = if (showReplyField) "Cancel reply" else "Reply",
-                    color = OrangeFF6200
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             if (showReplyField) {
@@ -361,7 +405,12 @@ fun CommentItem(
                     value = replyText,
                     onValueChange = { replyText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Write a reply...", color = Color.Gray) },
+                    placeholder = {
+                        Text(
+                            "Write a reply...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
                     trailingIcon = {
                         IconButton(onClick = {
                             if (replyText.isNotBlank()) {
@@ -370,16 +419,20 @@ fun CommentItem(
                                 showReplyField = false
                             }
                         }) {
-                            Icon(Icons.Default.Send, "Send", tint = OrangeFF6200)
+                            Icon(
+                                Icons.Default.Send,
+                                "Send",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF2A2A2A),
-                        unfocusedContainerColor = Color(0xFF2A2A2A),
-                        focusedBorderColor = OrangeFF6200,
-                        unfocusedBorderColor = Color.Gray,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
             }
@@ -387,11 +440,11 @@ fun CommentItem(
     }
 }
 
-private fun calculateDiscount(originalPrice: Double, currentPrice: Double): Int {
+fun calculateDiscount(originalPrice: Double, currentPrice: Double): Int {
     return if (originalPrice > 0) ((originalPrice - currentPrice) / originalPrice * 100).toInt() else 0
 }
 
-private fun getStoreName(url: String): String {
+fun getStoreName(url: String): String {
     return when {
         url.contains("amazon") -> "Amazon"
         url.contains("elcorteingles") -> "El Corte Inglés"
@@ -400,7 +453,7 @@ private fun getStoreName(url: String): String {
     }
 }
 
-private fun formatTimestamp(timestamp: com.google.firebase.Timestamp): String {
+fun formatTimestamp(timestamp: com.google.firebase.Timestamp): String {
     val now = System.currentTimeMillis()
     val diffInMillis = now - timestamp.seconds * 1000
     return when {
@@ -414,6 +467,6 @@ private fun formatTimestamp(timestamp: com.google.firebase.Timestamp): String {
     }
 }
 
-private fun getCurrentUserId(): String {
+fun getCurrentUserId(): String {
     return com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
 }
